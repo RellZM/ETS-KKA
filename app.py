@@ -958,43 +958,125 @@ HTML_TEMPLATE = """
         }
 
         /* Comparison Table */
-        table {
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background-color: #0c1322;
+        }
+        table.comp-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
+            white-space: nowrap;
         }
-        th, td {
-            padding: 10px 12px;
-            text-align: left;
+        table.comp-table th, table.comp-table td {
+            padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
         }
-        th {
+        table.comp-table th {
+            background-color: #0f172a;
             color: var(--text-muted);
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        tr.active-row {
-            background-color: rgba(56, 189, 248, 0.08);
-            font-weight: 600;
-        }
-        .badge-metric {
-            background-color: #1e293b;
-            border: 1px solid #334155;
-            padding: 2px 7px;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-        }
-        .badge-highlight {
-            background-color: rgba(16, 185, 129, 0.18);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            padding: 2px 7px;
-            border-radius: 4px;
             font-size: 11px;
             font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            white-space: nowrap;
+        }
+        table.comp-table tbody tr {
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+        table.comp-table tbody tr:hover {
+            background-color: rgba(30, 41, 59, 0.45);
+        }
+        table.comp-table tbody tr.active-row {
+            background-color: rgba(56, 189, 248, 0.09);
+        }
+        table.comp-table tbody tr.active-row td:first-child {
+            box-shadow: inset 4px 0 0 var(--accent-cyan);
+        }
+        table.comp-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .algo-cell {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+        .algo-tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 48px;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .algo-tag-bfs {
+            background-color: rgba(2, 132, 199, 0.18);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+        .algo-tag-ucs {
+            background-color: rgba(20, 184, 166, 0.18);
+            color: #2dd4bf;
+            border: 1px solid rgba(45, 212, 191, 0.35);
+        }
+        .algo-tag-astar {
+            background-color: rgba(168, 85, 247, 0.18);
+            color: #c084fc;
+            border: 1px solid rgba(192, 132, 252, 0.35);
+        }
+        .algo-title {
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 13px;
+        }
+
+        .metric-cell {
+            display: inline-flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        .metric-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .metric-unit {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .metric-box {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            padding: 3px 9px;
+            border-radius: 6px;
+        }
+
+        .badge-optimal {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -1180,26 +1262,31 @@ HTML_TEMPLATE = """
 
         <!-- COMPARATIVE METRICS TABLE -->
         <div class="solid-card">
-            <h3 style="margin: 0 0 14px 0; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-                Tabel Perbandingan Metrik (BFS vs UCS vs A*)
-            </h3>
-            <div style="overflow-x:auto;">
-                <table>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin: 0; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                    Tabel Perbandingan Metrik (BFS vs UCS vs A*)
+                </h3>
+                <span style="font-size:12px; color:var(--text-muted);">
+                    Klik baris untuk memuat simulasi algoritma terkait
+                </span>
+            </div>
+            <div class="table-responsive">
+                <table class="comp-table">
                     <thead>
                         <tr>
-                            <th>Algoritma</th>
-                            <th>Jumlah Langkah</th>
-                            <th>Total Liter Dipindah (Cost)</th>
-                            <th>Node Di-expand</th>
-                            <th>Node Di-generate</th>
-                            <th>Maks. OPEN</th>
-                            <th>Waktu (ms)</th>
-                            <th>Hasil Optimal Berdasarkan</th>
+                            <th style="text-align:left;">Algoritma</th>
+                            <th style="text-align:center;">Jumlah Langkah</th>
+                            <th style="text-align:center;">Total Liter Dipindah (Cost)</th>
+                            <th style="text-align:center;">Node Di-expand</th>
+                            <th style="text-align:center;">Node Di-generate</th>
+                            <th style="text-align:center;">Maks. OPEN</th>
+                            <th style="text-align:center;">Waktu Eksekusi</th>
+                            <th style="text-align:left;">Hasil Optimal Berdasarkan</th>
                         </tr>
                     </thead>
                     <tbody id="comparison-tbody">
-                        <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Memuat data...</td></tr>
+                        <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:20px;">Memuat data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1373,9 +1460,9 @@ HTML_TEMPLATE = """
         tbody.innerHTML = '';
 
         const algos = [
-            { key: 'bfs', name: 'BFS', desc: 'Jumlah langkah paling sedikit' },
-            { key: 'ucs', name: 'UCS', desc: 'Total liter dipindah paling sedikit' },
-            { key: 'astar', name: 'A*', desc: 'Total liter dipindah paling sedikit' }
+            { key: 'bfs', tag: 'BFS', fullName: 'Breadth-First Search', tagClass: 'algo-tag-bfs', desc: 'Jumlah langkah paling sedikit' },
+            { key: 'ucs', tag: 'UCS', fullName: 'Uniform-Cost Search', tagClass: 'algo-tag-ucs', desc: 'Total liter dipindah paling sedikit' },
+            { key: 'astar', tag: 'A*', fullName: 'A* Search', tagClass: 'algo-tag-astar', desc: 'Total liter dipindah paling sedikit' }
         ];
 
         algos.forEach(a => {
@@ -1383,23 +1470,60 @@ HTML_TEMPLATE = """
             const isRowActive = a.key === activeAlgo ? 'class="active-row"' : '';
             if (!res.found) {
                 tbody.innerHTML += `
-                    <tr ${isRowActive} onclick="selectAlgoTab('${a.key}')" style="cursor:pointer;">
-                        <td style="font-weight:700;">${res.name}</td>
-                        <td colspan="6" style="color:var(--accent-rose); font-weight:700;">Tidak ada solusi</td>
+                    <tr ${isRowActive} onclick="selectAlgoTab('${a.key}')">
+                        <td>
+                            <div class="algo-cell">
+                                <span class="algo-tag ${a.tagClass}">${a.tag}</span>
+                                <span class="algo-title">${a.fullName}</span>
+                            </div>
+                        </td>
+                        <td colspan="6" style="text-align:center; color:var(--accent-rose); font-weight:700;">Tidak ada solusi</td>
                         <td><span style="font-size:12px; color:var(--text-muted);">${a.desc}</span></td>
                     </tr>
                 `;
             } else {
+                const timeFormatted = typeof res.time_ms === 'number' ? res.time_ms.toFixed(3) : res.time_ms;
                 tbody.innerHTML += `
-                    <tr ${isRowActive} onclick="selectAlgoTab('${a.key}')" style="cursor:pointer;">
-                        <td style="font-weight:700;">${res.name}</td>
-                        <td><span class="badge-metric">${res.steps} langkah</span></td>
-                        <td><span class="badge-metric">${res.total_liters} L</span></td>
-                        <td><span class="badge-metric">${res.expanded}</span></td>
-                        <td><span class="badge-metric">${res.generated}</span></td>
-                        <td><span class="badge-metric">${res.max_open}</span></td>
-                        <td><span class="badge-metric">${res.time_ms} ms</span></td>
-                        <td><span class="badge-highlight">${a.desc}</span></td>
+                    <tr ${isRowActive} onclick="selectAlgoTab('${a.key}')">
+                        <td>
+                            <div class="algo-cell">
+                                <span class="algo-tag ${a.tagClass}">${a.tag}</span>
+                                <span class="algo-title">${a.fullName}</span>
+                            </div>
+                        </td>
+                        <td style="text-align:center;">
+                            <span class="metric-cell metric-box">
+                                <strong class="metric-num">${res.steps}</strong>
+                                <span class="metric-unit">langkah</span>
+                            </span>
+                        </td>
+                        <td style="text-align:center;">
+                            <span class="metric-cell metric-box">
+                                <strong class="metric-num">${res.total_liters}</strong>
+                                <span class="metric-unit">L</span>
+                            </span>
+                        </td>
+                        <td style="text-align:center;">
+                            <span class="mono metric-num" style="color:#cbd5e1;">${res.expanded}</span>
+                        </td>
+                        <td style="text-align:center;">
+                            <span class="mono metric-num" style="color:#cbd5e1;">${res.generated}</span>
+                        </td>
+                        <td style="text-align:center;">
+                            <span class="mono metric-num" style="color:#cbd5e1;">${res.max_open}</span>
+                        </td>
+                        <td style="text-align:center;">
+                            <span class="metric-cell metric-box">
+                                <strong class="metric-num">${timeFormatted}</strong>
+                                <span class="metric-unit">ms</span>
+                            </span>
+                        </td>
+                        <td style="text-align:left;">
+                            <span class="badge-optimal">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                ${a.desc}
+                            </span>
+                        </td>
                     </tr>
                 `;
             }
