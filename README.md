@@ -1,124 +1,107 @@
-# 🛡️ Stealth Hacker Grid: AI Pathfinding Visualizer
+# Visualisasi Water Jug (BFS, UCS, A*)
 > **Evaluasi Tengah Semester (ETS) - Konsep Kecerdasan Artifisial (KKA)**  
-> Simulasi Penetrasi Jaringan Komputer Berbasis Web menggunakan Algoritma AI Search.
+> Implementasi Web Simulasi & Komparasi Algoritma Pencarian Ruang Keadaan (*State Space Search*).
 
 ---
 
-## 📌 Deskripsi Proyek
-
-Aplikasi ini merupakan simulasi interaktif berbasis web untuk memvisualisasikan bagaimana agen kecerdasan buatan (*AI Agent / Hacker*) mencari rute penetrasi optimal menuju basis data utama (*Main Database*) di dalam topologi jaringan server.
-
-Visualisasi ini membandingkan kinerja tiga algoritma pencarian jalur (*pathfinding*):
-1. **Uninformed Search:**
-   - **BFS (Breadth-First Search)**
-   - **UCS (Uniform-Cost Search)**
-2. **Informed Search:**
-   - **A\* Search (dengan Manhattan Heuristic)**
+## 1. Alur Aplikasi Web
+Aplikasi berjalan dalam enam langkah, dari input masalah sampai perbandingan BFS, UCS, dan A*:
+- **Input masalah:** jumlah teko (2 sampai 5), kapasitas tiap teko, state start, dan state goal.
+- **Validasi input:** cek aturan konservasi volume air dan batasan kapasitas sebelum pencarian dimulai.
+- **Pilih algoritma:** BFS, UCS, A*, atau jalankan ketiganya sekaligus.
+- **Eksekusi dan visualisasi:** tampilkan langkah demi langkah dengan tombol *Next*, *Prev*, *Play*, *Pause*, dan pengatur kecepatan.
+- **Hasil:** jalur solusi, animasi tuang air, dan tabel metrik.
+- **Perbandingan:** tabel ketiga algoritma berdampingan.
 
 ---
 
-## ⚙️ Representasi Grid & Nilai Bobot (Cost Map)
-
-Ukuran grid simulasi adalah **12 × 12** sel dengan aturan:
-
-| Tipe Sel | Nilai Grid | Bobot (Cost) | Keterangan |
-| :--- | :---: | :---: | :--- |
-| **Start (Hacker)** | Koordinat `(1, 1)` | - | Titik awal penetrasi jaringan (*HCK*) |
-| **Goal (Main DB)** | Koordinat `(10, 10)` | - | Titik target database utama (*DB*) |
-| **Server Normal** | `0` | **1** | Server standar dengan tingkat risiko deteksi minimal |
-| **Firewall (Tembok)** | `1` | **∞ (Blocked)** | Lapisan keamanan absolut yang tidak dapat ditembus |
-| **Sensor IDS / Honeypot** | `2` | **10** | Perangkat keamanan deteksi intrusi dengan risiko alarm sangat tinggi |
+## 2. Aturan Input dan Validasi
+- Total air di state goal harus sama dengan total air di state start, karena aksi tuang tidak menambah atau mengurangi air.
+- **Jumlah teko:** 2 sampai 5. Lebih dari itu, ruang state membengkak dan animasi sulit dibaca.
+- **Kapasitas tiap teko:** bilangan bulat positif (> 0).
+- **Isi start dan goal:** bilangan bulat, dari 0 sampai kapasitas teko tersebut.
+- Total start = total goal. Kalau tidak sama, tampilkan pesan error, misalnya *"Goal 10 L, padahal air start 8 L"*.
+- Start tidak boleh sama dengan goal. Kalau sama, langkahnya 0.
+- **Tanpa solusi:** kalau pencarian selesai tanpa menemukan goal, tampilkan *"Tidak ada solusi"*.
 
 ---
 
-## 🧠 Analisis Perbandingan Algoritma
+## 3. Aturan Aksi (Operator)
+- Hanya ada satu aksi, yaitu menuang dari teko $i$ ke teko $j$, dan state selalu berupa daftar isi tiap teko, misalnya $(8, 0, 0)$.
+- **Syarat tuang:** $i \neq j$, teko $i$ tidak kosong, dan teko $j$ belum penuh.
+- **Jumlah yang dipindah:** $\min(\text{isi teko } i, \text{ sisa ruang teko } j)$. Tuangan berhenti saat teko $i$ kosong atau teko $j$ penuh.
+- **Jumlah kemungkinan aksi:** dengan $n$ teko ada $n \times (n - 1)$ tuangan dari tiap state.
+- Tidak ada aksi isi dari keran atau buang air, supaya total air tetap konstan.
 
-| Algoritma | Kategori | Heuristik | Karakteristik Jalur & Perilaku |
+---
+
+## 4. Cost per Algoritma
+BFS menghitung jumlah langkah, sedangkan UCS dan A* menghitung total liter yang dipindah, sehingga jalur terbaik tiap algoritma bisa berbeda:
+
+| Algoritma | Cost | Struktur Data | Hasil Optimal Berdasarkan |
 | :--- | :--- | :--- | :--- |
-| **BFS** *(Breadth-First Search)* | Uninformed | Tidak ada | Mengutamakan jumlah lompatan (*hop*) paling sedikit. **Mengabaikan bobot risiko**, sehingga sering menerobos sel IDS (risiko alarm tinggi / *Terdeteksi IDS*). |
-| **UCS** *(Uniform-Cost Search)* | Uninformed | Tidak ada | Memilih rute dengan total bobot akumulasi cost terendah ($g(n)$). Menemukan rute *stealth* aman dengan memutari sensor IDS, namun mengeksplorasi banyak node (*expanded nodes* tinggi). |
-| **A\* Search** | Informed | Manhattan Distance | Menggabungkan fungsi biaya riil $g(n)$ dan estimasi heuristik $h(n)$ ($f(n) = g(n) + h(n)$). Menemukan rute optimal yang sama amannya dengan UCS, namun jauh lebih efisien dalam jumlah ekspansi node. |
+| **BFS** | Tidak memakai cost; tiap tuangan = 1 langkah | Queue (FIFO) | Jumlah langkah paling sedikit |
+| **UCS** | $g(n) = \text{total liter yang sudah dipindah}$ | Priority queue berdasarkan $g$ | Total liter dipindah paling sedikit |
+| **A\*** | $g(n)$ sama dengan UCS, plus $h(n)$ | Priority queue berdasarkan $f = g + h$ | Total liter dipindah paling sedikit |
 
 ---
 
-## 🛠️ Prasyarat Sistem
+## 5. Heuristik A*
+Heuristik yang dipakai adalah setengah dari total selisih isi tiap teko terhadap goal, dan nilainya tidak pernah melebihi cost sebenarnya:
 
-- **Python** versi 3.8 atau yang lebih baru.
-- **pip** (Python package installer).
-- Web browser modern (Google Chrome, Firefox, Microsoft Edge, dll).
+$$h(n) = \frac{1}{2} \sum_{k} \left| \text{isi}_k(n) - \text{goal}_k \right|$$
+
+- **Contoh:** state $(8, 0, 0)$ dengan goal $(4, 4, 0)$.
+  - Selisih per teko: $|8 - 4| + |0 - 4| + |0 - 0| = 8$
+  - $h = 8 \div 2 = 4$, artinya paling sedikit 4 liter harus berpindah sampai goal.
+- Heuristik ini *admissible*. Satu tuangan sebanyak $a$ liter paling banyak mengurangi total selisih sebesar $2a$, jadi $h$ tidak pernah melebihi cost sebenarnya. Dengan begitu A* tetap optimal seperti UCS, tapi biasanya mengunjungi node lebih sedikit.
 
 ---
 
-## 🚀 Panduan Instalasi & Menjalankan Program
+## 6. Aturan Struktur Data
+Tiap algoritma memakai struktur data berbeda, tapi semuanya menyimpan *parent* supaya jalur solusi bisa ditelusuri mundur:
+- **BFS:** *queue* dan *visited set*. State yang sudah dikunjungi tidak dimasukkan lagi.
+- **UCS dan A\*:** *priority queue* dan simpanan $g$ terbaik per state. Kalau state yang sama ditemukan lewat jalur lebih murah, perbarui nilainya.
+- **Tie-breaking:** kalau prioritas sama, ambil node yang masuk lebih dulu, supaya animasi selalu konsisten.
+- **Parent:** simpan state asal tiap node, lalu telusuri mundur dari goal untuk mendapat jalur solusi.
+
+---
+
+## 7. Elemen Visualisasi
+Visualisasi menampilkan lima hal supaya proses pencarian terlihat, bukan hanya hasil akhirnya:
+- **Teko dan air:** gambar teko dengan level air proporsional kapasitas, penanda skala liter, dan penyorotan teko asal (*source*) dan teko tujuan (*target*) saat menuang.
+- **Panel OPEN dan CLOSED:** isi *frontier* (OPEN list) dan state yang sudah dikunjungi (CLOSED list).
+- **Node yang diproses:** nilai $g(n)$, $h(n)$, dan $f(n)$ untuk node evaluasi saat ini.
+- **Alur transisi & jalur solusi:** urutan langkah solusi yang dapat diklik dan disorot.
+- **Kontrol playback:** tombol *Play*, *Pause*, *Next*, *Prev*, *Awal*, *Akhir*, slider timeline, dan pengatur kecepatan (*speed slider*).
+
+---
+
+## 8. Metrik Perbandingan
+
+| Metrik | Diukur Untuk | Yang Diharapkan |
+| :--- | :--- | :--- |
+| **Jumlah langkah** | BFS, UCS, A* | BFS paling sedikit |
+| **Total liter dipindah (cost)** | BFS, UCS, A* | UCS dan A* paling kecil |
+| **Node di-expand** | BFS, UCS, A* | A* paling sedikit |
+| **Node di-generate** | BFS, UCS, A* | A* paling sedikit |
+| **Ukuran maksimum OPEN** | BFS, UCS, A* | Bergantung pada kasus uji |
+| **Waktu eksekusi (ms)** | BFS, UCS, A* | Bergantung pada kasus uji |
+
+---
+
+## 9. Panduan Menjalankan Program
 
 ### 1. Buka Terminal / PowerShell
-Arahkan terminal ke folder proyek ini:
 ```bash
 cd "d:\Koding-serius\KKA\ETS"
 ```
 
-### 2. Install Dependensi
-Install pustaka Flask yang dibutuhkan:
-```bash
-pip install -r requirements.txt
-```
-*Atau secara langsung:*
-```bash
-pip install flask
-```
-
-### 3. Jalankan Aplikasi
-Jalankan file utama [ETS.py](ETS.py):
+### 2. Jalankan Server Flask
 ```bash
 python ETS.py
 ```
 
-Setelah dijalankan, terminal akan menampilkan log seperti berikut:
-```text
- * Serving Flask app 'ETS'
- * Debug mode: on
- * Running on http://127.0.0.1:5000
-Press CTRL+C to quit
-```
-
-### 4. Buka di Web Browser
-Buka browser Anda dan akses tautan:
-👉 **[http://127.0.0.1:5000](http://127.0.0.1:5000)** atau **[http://localhost:5000](http://localhost:5000)**
-
----
-
-## 🕹️ Panduan Penggunaan Antarmuka
-
-1. **Menggambar / Memodifikasi Peta (Toolbar Kiri):**
-   - Klik tombol **Firewall (Tembok)** untuk memasang rintangan yang memblokir jalur.
-   - Klik tombol **Sensor IDS (Cost: 10)** untuk meletakkan jebakan/sensor berisiko tinggi.
-   - Klik tombol **Server Normal (Cost: 1)** untuk mengembalikan sel ke kondisi normal.
-   - Klik tombol **Reset Map Default** untuk mengembalikan peta ke skenario default ETS.
-2. **Menjalankan Algoritma:**
-   - Klik salah satu tombol eksekusi: **Jalankan BFS**, **Jalankan UCS**, atau **Jalankan A\***.
-   - Amati animasi warna biru muda (*node yang dieksplorasi*) dan warna hijau (*jalur akhir penetrasi*).
-3. **Membaca Tabel Komparasi:**
-   - Tabel di panel kanan otomatis memperbarui perbandingan:
-     - **Langkah (Hop)**: Jumlah langkah dari Start ke Goal.
-     - **Risk Cost**: Akumulasi total bobot rute yang dilalui.
-     - **Node**: Total simpul yang dieksplorasi (*expanded nodes*).
-     - **Waktu**: Durasi komputasi algoritma (dalam milidetik).
-     - **Status**: Status deteksi (*Stealth Aman* vs *Terdeteksi IDS*).
-
----
-
-## 📂 Struktur File
-
-```text
-ETS/
-├── ETS.py              # Backend Flask (AI Search Logic) + Template Frontend Interaktif
-├── requirements.txt    # Daftar dependensi Python (Flask)
-└── README.md           # Dokumentasi dan panduan eksekusi proyek
-```
-
----
-
-## 🛑 Cara Menghentikan Server
-
-Untuk menghentikan server Flask, kembali ke jendela terminal yang sedang menjalankan program, lalu tekan kombinasi tombol:
-`CTRL + C`
+### 3. Akses Melalui Browser
+Buka peramban web dan akses:
+**[http://127.0.0.1:5000](http://127.0.0.1:5000)**
