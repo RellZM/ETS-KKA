@@ -1141,13 +1141,10 @@ HTML_TEMPLATE = """
             </div>
 
             <div class="action-row">
-                <span style="font-size:12px; color:var(--text-muted);">
-                    Hanya ada aksi menuang antar teko (tanpa keran / buang air).
+                <span style="font-size:12px; color:var(--text-muted); display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Hanya ada aksi menuang antar teko (tanpa keran / buang air). Simulasi otomatis diperbarui secara real-time.
                 </span>
-                <button class="btn-solve-all" id="btn-submit" onclick="runSolvers()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    Jalankan & Bandingkan Semua (BFS, UCS, A*)
-                </button>
             </div>
         </div>
 
@@ -1302,6 +1299,18 @@ HTML_TEMPLATE = """
     let timer = null;
     let playSpeed = 900;
 
+    let debounceTimer = null;
+
+    function onInputChange() {
+        const isValid = validateAndRecalculate();
+        if (isValid) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                runSolvers();
+            }, 300);
+        }
+    }
+
     function setJugCount(n) {
         numJugs = n;
         document.querySelectorAll('.btn-jug-count').forEach((b, idx) => {
@@ -1313,7 +1322,9 @@ HTML_TEMPLATE = """
         const defaultGoals = [4, 4, 0, 0, 0];
 
         renderInputRows(defaultCaps.slice(0, n), defaultStarts.slice(0, n), defaultGoals.slice(0, n));
-        validateAndRecalculate();
+        if (validateAndRecalculate()) {
+            runSolvers();
+        }
     }
 
     function renderInputRows(caps, starts, goals) {
@@ -1329,15 +1340,15 @@ HTML_TEMPLATE = """
                 </div>
                 <div class="row-input">
                     <span>Kapasitas (L):</span>
-                    <input type="number" min="1" id="cap-${i}" value="${caps[i] || 5}" oninput="validateAndRecalculate()">
+                    <input type="number" min="1" id="cap-${i}" value="${caps[i] || 5}" oninput="onInputChange()">
                 </div>
                 <div class="row-input">
                     <span>Isi Start (L):</span>
-                    <input type="number" min="0" id="start-${i}" value="${starts[i] || 0}" oninput="validateAndRecalculate()">
+                    <input type="number" min="0" id="start-${i}" value="${starts[i] || 0}" oninput="onInputChange()">
                 </div>
                 <div class="row-input">
                     <span>Isi Goal (L):</span>
-                    <input type="number" min="0" id="goal-${i}" value="${goals[i] || 0}" oninput="validateAndRecalculate()">
+                    <input type="number" min="0" id="goal-${i}" value="${goals[i] || 0}" oninput="onInputChange()">
                 </div>
             `;
             container.appendChild(card);
@@ -1409,7 +1420,7 @@ HTML_TEMPLATE = """
                 Total air seimbang (${sumStart} L)
             `;
             errorBanner.style.display = 'none';
-            submitBtn.disabled = false;
+            if (submitBtn) submitBtn.disabled = false;
         } else {
             statusEl.className = 'status-invalid';
             statusEl.innerHTML = `
@@ -1418,7 +1429,7 @@ HTML_TEMPLATE = """
             `;
             errorBanner.style.display = 'flex';
             document.getElementById('error-text').textContent = errorMsg;
-            submitBtn.disabled = true;
+            if (submitBtn) submitBtn.disabled = true;
         }
 
         return isValid;
@@ -1550,6 +1561,33 @@ HTML_TEMPLATE = """
 
         renderSolutionStepsList(path);
         renderOpenClosed(chosen);
+
+        if (!chosen.found || path.length === 0) {
+            stopPlay();
+            currentStep = 0;
+            const caps = solversData.caps || getFormValues().caps;
+            const start = solversData.start || getFormValues().start;
+            renderJugsStage(start, caps, null, null);
+
+            const badge = document.getElementById('step-badge');
+            badge.textContent = 'TIDAK ADA SOLUSI';
+            badge.style.backgroundColor = 'rgba(244, 63, 94, 0.2)';
+            badge.style.color = 'var(--accent-rose)';
+
+            document.getElementById('step-action-desc').textContent = 'Goal tidak dapat dicapai dari kondisi awal ini.';
+            document.getElementById('eval-state').textContent = `(${start.join(', ')})`;
+            document.getElementById('eval-g').textContent = '-';
+            document.getElementById('eval-h').textContent = '-';
+            document.getElementById('eval-f').textContent = '-';
+
+            document.getElementById('lbl-curr-step').textContent = '0';
+            document.getElementById('lbl-max-step').textContent = '0';
+            scrubber.value = 0;
+            scrubber.disabled = true;
+            return;
+        }
+
+        scrubber.disabled = false;
         jumpStep(0);
     }
 
@@ -1632,7 +1670,9 @@ HTML_TEMPLATE = """
 
     function jumpStep(idx) {
         if (!solversData || !solversData[activeAlgo]) return;
-        const path = solversData[activeAlgo].path;
+        const chosen = solversData[activeAlgo];
+        if (!chosen.found) return;
+        const path = chosen.path;
         if (!path || path.length === 0) return;
 
         currentStep = Math.max(0, Math.min(idx, path.length - 1));
@@ -1641,7 +1681,11 @@ HTML_TEMPLATE = """
 
         renderJugsStage(step.state, caps, step.src, step.dst);
 
-        document.getElementById('step-badge').textContent = `LANGKAH ${currentStep} / ${path.length - 1}`;
+        const badge = document.getElementById('step-badge');
+        badge.textContent = `LANGKAH ${currentStep} / ${path.length - 1}`;
+        badge.style.backgroundColor = 'rgba(56, 189, 248, 0.15)';
+        badge.style.color = 'var(--accent-cyan)';
+
         document.getElementById('step-action-desc').textContent = step.action;
         document.getElementById('eval-state').textContent = `(${step.state.join(', ')})`;
         document.getElementById('eval-g').textContent = `${step.g} L`;
@@ -1661,7 +1705,9 @@ HTML_TEMPLATE = """
 
     function nextStep() {
         if (!solversData || !solversData[activeAlgo]) return;
-        const path = solversData[activeAlgo].path;
+        const chosen = solversData[activeAlgo];
+        if (!chosen.found) return;
+        const path = chosen.path;
         if (!path || currentStep >= path.length - 1) {
             stopPlay();
             return;
@@ -1670,22 +1716,25 @@ HTML_TEMPLATE = """
     }
 
     function prevStep() {
+        if (!solversData || !solversData[activeAlgo] || !solversData[activeAlgo].found) return;
         if (currentStep <= 0) return;
         jumpStep(currentStep - 1);
     }
 
     function jumpEnd() {
-        if (!solversData || !solversData[activeAlgo]) return;
+        if (!solversData || !solversData[activeAlgo] || !solversData[activeAlgo].found) return;
         const path = solversData[activeAlgo].path;
         if (!path) return;
         jumpStep(path.length - 1);
     }
 
     function scrub(val) {
+        if (!solversData || !solversData[activeAlgo] || !solversData[activeAlgo].found) return;
         jumpStep(parseInt(val));
     }
 
     function togglePlay() {
+        if (!solversData || !solversData[activeAlgo] || !solversData[activeAlgo].found) return;
         if (isPlaying) {
             stopPlay();
         } else {
@@ -1694,7 +1743,7 @@ HTML_TEMPLATE = """
     }
 
     function startPlay() {
-        if (!solversData || !solversData[activeAlgo]) return;
+        if (!solversData || !solversData[activeAlgo] || !solversData[activeAlgo].found) return;
         const path = solversData[activeAlgo].path;
         if (!path || path.length <= 1) return;
 
