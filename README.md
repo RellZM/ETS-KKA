@@ -6,8 +6,8 @@
 
 ## 1. Alur Aplikasi Web
 Aplikasi berjalan dalam enam langkah, dari input masalah sampai perbandingan BFS, UCS, dan A*:
-- **Input masalah:** jumlah teko (2 sampai 5), kapasitas tiap teko, state start, dan state goal.
-- **Validasi input:** cek aturan konservasi volume air dan batasan kapasitas sebelum pencarian dimulai.
+- **Input masalah:** jumlah teko (3 sampai 5), kapasitas tiap teko, dan target volume yang ingin diukur (< kapasitas salah satu teko). Isi awal ditentukan otomatis (teko 1 penuh, lainnya kosong).
+- **Validasi input:** cek batasan kapasitas dan target sebelum pencarian dimulai.
 - **Pilih algoritma:** BFS, UCS, A*, atau jalankan ketiganya sekaligus.
 - **Eksekusi dan visualisasi:** tampilkan langkah demi langkah dengan tombol *Next*, *Prev*, *Play*, *Pause*, dan pengatur kecepatan.
 - **Hasil:** jalur solusi, animasi tuang air, dan tabel metrik.
@@ -16,10 +16,10 @@ Aplikasi berjalan dalam enam langkah, dari input masalah sampai perbandingan BFS
 ---
 
 ## 2. Aturan Input dan Validasi
-- Total air di state goal harus sama dengan total air di state start, karena aksi tuang tidak menambah atau mengurangi air.
-- **Jumlah teko:** 2 sampai 5. Lebih dari itu, ruang state membengkak dan animasi sulit dibaca.
+- **Jumlah teko:** 3 sampai 5. Mempermudah penjelasan teka-teki multi-teko.
 - **Kapasitas tiap teko:** bilangan bulat positif (> 0).
-- **Isi start dan goal:** bilangan bulat, dari 0 sampai kapasitas teko tersebut.
+- **Isi awal:** otomatis ditentukan (Teko 1 terisi penuh sebagai wadah utama, teko lainnya kosong 0 L).
+- **Target volume:** bilangan bulat positif (> 0) dan harus lebih kecil dari kapasitas teko terbesar (< max kapasitas teko).
 - Total start = total goal. Kalau tidak sama, tampilkan pesan error, misalnya *"Goal 10 L, padahal air start 8 L"*.
 - Start tidak boleh sama dengan goal. Kalau sama, langkahnya 0.
 - **Tanpa solusi:** kalau pencarian selesai tanpa menemukan goal, tampilkan *"Tidak ada solusi"*.

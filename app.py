@@ -66,8 +66,8 @@ def make_heuristic(target_mode, target_amount, goal_tuple):
 
 def validate_inputs(caps, start, target_mode, target_amount, goal):
     n = len(caps)
-    if not (2 <= n <= 5):
-        return False, f"Jumlah teko harus antara 2 sampai 5 teko (input: {n} teko)!"
+    if not (3 <= n <= 5):
+        return False, f"Jumlah teko harus antara 3 sampai 5 teko (input: {n} teko)!"
     if len(start) != n:
         return False, "Jumlah nilai start harus sama dengan jumlah teko!"
     
@@ -84,10 +84,10 @@ def validate_inputs(caps, start, target_mode, target_amount, goal):
     if target_mode == "single":
         if target_amount <= 0:
             return False, "Target volume air yang ingin diukur harus lebih besar dari 0 L!"
-        if target_amount > max(caps):
-            return False, f"Target {target_amount}L melebihi kapasitas teko terbesar ({max(caps)}L)!"
+        if target_amount >= max(caps):
+            return False, f"Target ({target_amount}L) harus lebih kecil dari kapasitas teko terbesar ({max(caps)}L)!"
         if target_amount > sum_start:
-            return False, f"Target {target_amount}L melebihi total seluruh air yang tersedia ({sum_start}L)!"
+            return False, f"Target ({target_amount}L) melebihi total seluruh air yang tersedia ({sum_start}L)!"
     else:
         if len(goal) != n:
             return False, "Jumlah nilai goal harus sama dengan jumlah teko!"
@@ -509,41 +509,26 @@ HTML_TEMPLATE = """
             justify-content: center;
             margin: 4px 0;
         }
-        .mode-switcher {
-            display: flex;
-            background-color: #0f172a;
-            border: 1px solid #1e293b;
-            border-radius: 12px;
-            padding: 4px;
-            gap: 4px;
-            max-width: 520px;
-            width: 100%;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-        }
-        .mode-btn {
-            flex: 1;
-            padding: 10px 16px;
-            background-color: transparent;
-            border: none;
-            border-radius: 8px;
-            color: var(--text-muted);
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
+        /* AI Mode Header */
+        .ai-mode-header {
             display: flex;
             align-items: center;
             justify-content: center;
+            margin: 0 0 16px 0;
+        }
+        .ai-mode-pill {
+            display: inline-flex;
+            align-items: center;
             gap: 8px;
-            transition: all 0.2s ease;
-        }
-        .mode-btn:hover {
-            color: var(--text-main);
-            background-color: rgba(255,255,255,0.04);
-        }
-        .mode-btn.active {
-            background-color: var(--accent-blue);
-            color: white;
-            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+            padding: 8px 20px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.18), rgba(56, 189, 248, 0.08));
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: var(--accent-cyan);
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+            letter-spacing: 0.2px;
         }
 
         /* Solid Cards */
@@ -561,6 +546,12 @@ HTML_TEMPLATE = """
             align-items: center;
             flex-wrap: wrap;
             gap: 8px;
+            margin-bottom: 0px;
+            padding-bottom: 0px;
+            border-bottom: none;
+            transition: all 0.2s ease;
+        }
+        .presets-bar.with-border {
             margin-bottom: 16px;
             padding-bottom: 14px;
             border-bottom: 1px solid #1e293b;
@@ -569,7 +560,7 @@ HTML_TEMPLATE = """
             background-color: #1e293b;
             border: 1px solid #334155;
             color: var(--text-main);
-            padding: 6px 12px;
+            padding: 7px 13px;
             border-radius: 8px;
             font-size: 12px;
             font-weight: 600;
@@ -578,6 +569,7 @@ HTML_TEMPLATE = """
             align-items: center;
             gap: 6px;
             transition: all 0.15s ease;
+            user-select: none;
         }
         .preset-chip:hover {
             border-color: var(--accent-cyan);
@@ -586,8 +578,58 @@ HTML_TEMPLATE = """
         }
         .preset-chip.highlight {
             border-color: var(--accent-amber);
-            background-color: rgba(245, 158, 11, 0.15);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(245, 158, 11, 0.1));
             color: #fbbf24;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+            font-weight: 700;
+        }
+        .chip-badge {
+            background-color: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: var(--accent-cyan);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+        .preset-info-card {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background-color: #0b1120;
+            border: 1px solid #1e293b;
+            border-left: 3px solid var(--accent-amber);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }
+        .preset-info-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .preset-info-tag {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .preset-info-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .preset-info-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin: 0;
+            line-height: 1.45;
         }
 
         /* Target Mode Selector Tabs */
@@ -623,21 +665,33 @@ HTML_TEMPLATE = """
             color: var(--accent-cyan);
         }
 
-        /* Single Target Highlight Box */
+        /* Dual Start & Target Controls Grid */
+        .target-and-start-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 768px) {
+            .target-and-start-grid {
+                grid-template-columns: 1fr;
+            }
+        }
         .single-target-box {
             background-color: rgba(56, 189, 248, 0.06);
             border: 1px dashed rgba(56, 189, 248, 0.35);
             border-radius: 10px;
-            padding: 12px 18px;
+            padding: 12px 16px;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 16px;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .single-target-box.start-box {
+            background-color: rgba(245, 158, 11, 0.06);
+            border: 1px dashed rgba(245, 158, 11, 0.35);
         }
         .single-target-title {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             color: var(--text-main);
             display: flex;
@@ -648,6 +702,7 @@ HTML_TEMPLATE = """
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
         .input-target-amt {
             width: 70px;
@@ -661,6 +716,10 @@ HTML_TEMPLATE = """
             color: var(--accent-cyan);
             font-family: 'JetBrains Mono', monospace;
             outline: none;
+        }
+        .input-target-amt.start-input {
+            border-color: var(--accent-amber);
+            color: #fbbf24;
         }
 
         /* Jugs Inputs Grid */
@@ -685,7 +744,44 @@ HTML_TEMPLATE = """
             color: var(--accent-cyan);
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 6px;
+        }
+        .teko-main-tag {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+        .auto-fill-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        .badge-auto-fill {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .badge-auto-fill.filled {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+        .badge-auto-fill.empty {
+            background-color: #1e293b;
+            color: var(--text-muted);
+            border: 1px solid #334155;
         }
         .row-input {
             display: flex;
@@ -1281,6 +1377,10 @@ HTML_TEMPLATE = """
             from { transform: scale(0.85); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -1297,105 +1397,50 @@ HTML_TEMPLATE = """
                 Water Jug Puzzle & AI Search Visualizer
             </h1>
             <p class="subtitle">
-                Teka-teki mengukur air menggunakan kombinasi teko (seperti di video Die Hard / Poisson 8-5-3) beserta simulasi dan komparasi algoritma BFS, UCS, dan A*.
+                Visualisasi water jug menggunakan BFS, UCS, dan A* Search
             </p>
         </header>
 
-        <!-- MODE SWITCHER (MAIN GAMEPLAY vs AI VISUALIZER) -->
-        <div class="mode-switcher-container">
-            <div class="mode-switcher">
-                <button class="mode-btn active" id="btn-mode-interactive" onclick="switchMainMode('interactive')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-                    Coba Sendiri (Teka-Teki)
-                </button>
-                <button class="mode-btn" id="btn-mode-ai" onclick="switchMainMode('ai')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2V6a4 4 0 0 1 4-4z"/></svg>
-                    Visualisasi AI (BFS / UCS / A*)
-                </button>
+        <!-- VISUALISASI AI ACTIVE BANNER -->
+        <div class="ai-mode-header">
+            <div class="ai-mode-pill">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2V6a4 4 0 0 1 4-4z"/></svg>
+                <span>Visualisasi AI (BFS / UCS / A* Search)</span>
             </div>
         </div>
 
-        <!-- CONFIGURATION CARD -->
+        <!-- PRESETS CARD -->
         <div class="solid-card">
-            <!-- PRESETS LIST -->
-            <div class="presets-bar">
-                <span style="font-size:12px; font-weight:700; color:var(--text-muted); margin-right:4px;">Preset:</span>
-                <button class="preset-chip highlight" onclick="loadVideoShortsPreset()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    Teka-teki Video (8-5-3 Ukur 4L)
+            <!-- PRESETS BAR -->
+            <div class="presets-bar" id="presets-bar">
+                <span style="font-size:12px; font-weight:700; color:var(--text-muted); margin-right:4px;">Pilih Kasus Preset:</span>
+                <button class="preset-chip highlight" id="preset-btn-video" onclick="applyPreset('video')">
+                    <span class="chip-badge">3 Teko</span> 8-5-3 (Target 4L)
                 </button>
-                <button class="preset-chip" onclick="loadPoissonPreset()">
-                    Poisson Klasik (8, 5, 3 &rarr; [4, 4, 0])
+                <button class="preset-chip" id="preset-btn-contrast" onclick="applyPreset('contrast')">
+                    <span class="chip-badge">3 Teko</span> 10-9-1 (Target 5L)
                 </button>
-                <button class="preset-chip" onclick="loadContrastPreset()">
-                    Kontras BFS vs UCS (10, 9, 1 &rarr; [5, 5, 0])
+                <button class="preset-chip" id="preset-btn-4jugs" onclick="applyPreset('4jugs')">
+                    <span class="chip-badge">4 Teko</span> 12-8-5-3 (Target 6L)
                 </button>
-                <button class="preset-chip" onclick="load4JugsPreset()">
-                    4 Teko (12, 8, 5, 3 &rarr; Ukur 6L)
-                </button>
-                <button class="preset-chip" onclick="load2JugsPreset()">
-                    2 Teko (7, 4 &rarr; Ukur 3L)
+                <button class="preset-chip" id="preset-btn-5jugs" onclick="applyPreset('5jugs')">
+                    <span class="chip-badge">5 Teko</span> 16-9-7-5-2 (Target 8L)
                 </button>
             </div>
 
-            <!-- TARGET MODE SELECTOR -->
-            <div class="target-mode-row">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:13px; font-weight:700; color:var(--text-muted);">Jumlah Teko:</span>
-                    <button class="preset-chip" id="btn-count-2" onclick="setJugCount(2)">2</button>
-                    <button class="preset-chip" id="btn-count-3" onclick="setJugCount(3)">3</button>
-                    <button class="preset-chip" id="btn-count-4" onclick="setJugCount(4)">4</button>
-                    <button class="preset-chip" id="btn-count-5" onclick="setJugCount(5)">5</button>
+            <!-- PRESET DESCRIPTION CARD (RINGKAS & JELAS) -->
+            <div class="preset-info-card" id="preset-info-card">
+                <div class="preset-info-header">
+                    <span class="preset-info-tag" id="preset-info-tag">Kasus Klasik 3 Teko</span>
+                    <span class="preset-info-title" id="preset-info-title">Teko 8-5-3 &rarr; Ukur 4 Liter</span>
                 </div>
-
-                <div class="target-pills">
-                    <button class="target-pill-btn active" id="pill-target-single" onclick="setTargetMode('single')">
-                        Target Sederhana (Ukur X Liter)
-                    </button>
-                    <button class="target-pill-btn" id="pill-target-exact" onclick="setTargetMode('exact')">
-                        Target Spesifik Tiap Teko (Exact State)
-                    </button>
-                </div>
-            </div>
-
-            <!-- TARGET SEDERHANA (SINGLE VOLUME) - PERSIS VIDEO -->
-            <div class="single-target-box" id="box-target-single">
-                <div class="single-target-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-                    Tujuan Teka-Teki: Ukur volume air di salah satu teko
-                </div>
-                <div class="single-target-control">
-                    <span style="font-size:13px; font-weight:600; color:var(--text-muted);">Target Volume:</span>
-                    <input type="number" id="input-target-amt" class="input-target-amt" min="1" value="4" oninput="onInputChange()">
-                    <span style="font-size:14px; font-weight:700; color:var(--accent-cyan);">Liter</span>
-                </div>
-            </div>
-
-            <!-- DYNAMIC JUG INPUTS GRID -->
-            <div class="jugs-input-grid" id="jugs-inputs-container">
-                <!-- Dynamically populated -->
-            </div>
-
-            <!-- WATER CONSERVATION & VALIDATION STATUS -->
-            <div class="water-sum-bar">
-                <div style="display:flex; gap:16px; align-items:center;">
-                    <span>Total Air Awal: <b id="lbl-total-start" class="mono" style="color:var(--accent-cyan);">8 L</b></span>
-                    <span id="wrap-total-goal" style="display:none;">Total Air Goal: <b id="lbl-total-goal" class="mono" style="color:var(--accent-cyan);">8 L</b></span>
-                </div>
-                <div id="lbl-validation-status" class="status-valid">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    Siap Disimulasikan
-                </div>
-            </div>
-
-            <!-- ERROR BANNER -->
-            <div id="error-banner">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span id="error-text">Pesan kesalahan</span>
+                <p class="preset-info-desc" id="preset-info-desc">
+                    Kasus klasik teka-teki pembagian air (8, 5, 3 L) dengan target 4 Liter. Menguji BFS (langkah terpendek) dan A*.
+                </p>
             </div>
         </div>
 
-        <!-- MAIN INTERACTIVE STAGE & VISUALIZATION -->
+        <!-- MAIN SIMULATION STAGE -->
         <div class="stage-card">
             <!-- STAGE HUD -->
             <div class="stage-hud">
@@ -1404,12 +1449,9 @@ HTML_TEMPLATE = """
                     <span id="hud-target-desc">Ukur tepat 4 Liter pada salah satu teko</span>
                 </div>
                 <div class="hud-stats">
-                    <div id="hud-interactive-stats" style="display:flex; gap:12px;">
-                        <span>Langkah: <b class="stat-badge" id="player-move-count">0</b></span>
-                        <span>Air Dipindah: <b class="stat-badge" id="player-liter-count">0 L</b></span>
-                    </div>
-                    <div id="hud-ai-stats" style="display:none;">
+                    <div id="hud-ai-stats" style="display:flex; align-items:center; gap:14px;">
                         <span>Algoritma Aktif: <b class="stat-badge" id="hud-active-algo-name">BFS</b></span>
+                        <span id="hud-initial-info" style="font-size:12px; color:var(--text-muted);">Air Awal: <b style="color:var(--accent-cyan);" id="hud-start-summary">8L (Teko 1 Penuh)</b></span>
                     </div>
                 </div>
             </div>
@@ -1425,28 +1467,8 @@ HTML_TEMPLATE = """
                 <!-- Dynamically populated -->
             </div>
 
-            <!-- MODE 1: INTERACTIVE PUZZLE CONTROLS ("COBA SENDIRI") -->
-            <div class="interactive-controls-bar" id="interactive-controls-section">
-                <button class="btn-action" onclick="undoPlayerMove()" id="btn-undo" disabled>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-                    Batalkan (Undo)
-                </button>
-                <button class="btn-action" onclick="resetPlayerGame()">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                    Ulang dari Awal (Reset)
-                </button>
-                <button class="btn-action" onclick="givePlayerHint()" id="btn-hint">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
-                    Beri Petunjuk (Hint)
-                </button>
-                <button class="btn-action primary" onclick="switchMainMode('ai')">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    Lihat Solusi Lengkap AI
-                </button>
-            </div>
-
-            <!-- MODE 2: AI STEP NARRATION & PLAYBACK CONTROLS -->
-            <div id="ai-controls-section" style="display:none; flex-direction:column; gap:12px;">
+            <!-- AI STEP NARRATION & PLAYBACK CONTROLS (ALWAYS VISIBLE) -->
+            <div id="ai-controls-section" style="display:flex; flex-direction:column; gap:12px;">
                 <!-- STEP NARRATION CARD -->
                 <div class="narration-card">
                     <div class="narration-header">
@@ -1503,7 +1525,7 @@ HTML_TEMPLATE = """
         </div>
 
         <!-- AI INSPECT SECTION (ALGO TABS, SOLUTION PATH, OPEN/CLOSED LISTS) -->
-        <div id="ai-inspect-section" class="ai-inspect-layout" style="display:none;">
+        <div id="ai-inspect-section" class="ai-inspect-layout" style="display:grid;">
             <!-- LEFT: COMPARISON TABLE -->
             <div class="solid-card" style="display:flex; flex-direction:column; gap:12px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
@@ -1512,7 +1534,7 @@ HTML_TEMPLATE = """
                         Tabel Perbandingan Metrik (BFS vs UCS vs A*)
                     </h3>
                     <span style="font-size:12px; color:var(--text-muted);">
-                        Klik baris tabel untuk meninjau jalur algoritma
+                        Klik baris tabel untuk meninjau simulasi algoritma
                     </span>
                 </div>
                 <div class="table-responsive">
@@ -1582,38 +1604,12 @@ HTML_TEMPLATE = """
 
     </div>
 
-    <!-- VICTORY MODAL -->
-    <div class="modal-backdrop" id="victory-modal">
-        <div class="modal-card">
-            <div style="font-size:48px;">🏆</div>
-            <h2 style="margin:0; font-size:22px; color:var(--accent-green);">Teka-Teki Berhasil Dipecahkan!</h2>
-            <p id="victory-msg" style="margin:0; font-size:14px; color:var(--text-muted); line-height:1.5;">
-                Anda berhasil mengukur volume air yang diinginkan!
-            </p>
-            <div style="display:flex; gap:10px; width:100%; justify-content:center; margin-top:8px;">
-                <button class="btn-action" onclick="closeVictoryModal(); resetPlayerGame();">
-                    Main Lagi
-                </button>
-                <button class="btn-action primary" onclick="closeVictoryModal(); switchMainMode('ai');">
-                    Tonton Solusi AI
-                </button>
-            </div>
-        </div>
-    </div>
-
 <script>
     // State Aplikasi
-    let currentMainMode = 'interactive'; // 'interactive' atau 'ai'
-    let targetMode = 'single'; // 'single' atau 'exact'
+    let currentMainMode = 'ai';
+    let targetMode = 'single';
     let numJugs = 3;
     let solversData = null;
-
-    // State Pemain (Mode Interaktif)
-    let playerInitialState = [8, 0, 0];
-    let playerCurrentState = [8, 0, 0];
-    let playerHistory = [];
-    let playerTotalLiters = 0;
-    let selectedSourceJug = null; // indeks teko sumber yang dipilih (0..n-1)
 
     // State AI Playback
     let activeAlgo = 'bfs';
@@ -1623,446 +1619,145 @@ HTML_TEMPLATE = """
     let playSpeed = 900;
     let debounceTimer = null;
 
-    // --- INISIALISASI & PRESET ---
-    function loadVideoShortsPreset() {
-        targetMode = 'single';
-        updateTargetModeUI();
-        numJugs = 3;
-        updateJugCountUI();
-        document.getElementById('input-target-amt').value = 4;
-        renderInputRows([8, 5, 3], [8, 0, 0], [4, 4, 0]);
-        triggerSolveAndSync();
-    }
-
-    function loadPoissonPreset() {
-        targetMode = 'exact';
-        updateTargetModeUI();
-        numJugs = 3;
-        updateJugCountUI();
-        renderInputRows([8, 5, 3], [8, 0, 0], [4, 4, 0]);
-        triggerSolveAndSync();
-    }
-
-    function loadContrastPreset() {
-        targetMode = 'exact';
-        updateTargetModeUI();
-        numJugs = 3;
-        updateJugCountUI();
-        renderInputRows([10, 9, 1], [10, 0, 0], [5, 5, 0]);
-        triggerSolveAndSync();
-    }
-
-    function load4JugsPreset() {
-        targetMode = 'single';
-        updateTargetModeUI();
-        numJugs = 4;
-        updateJugCountUI();
-        document.getElementById('input-target-amt').value = 6;
-        renderInputRows([12, 8, 5, 3], [12, 0, 0, 0], [6, 6, 0, 0]);
-        triggerSolveAndSync();
-    }
-
-    function load2JugsPreset() {
-        targetMode = 'single';
-        updateTargetModeUI();
-        numJugs = 2;
-        updateJugCountUI();
-        document.getElementById('input-target-amt').value = 3;
-        renderInputRows([7, 4], [7, 0], [3, 4]);
-        triggerSolveAndSync();
-    }
-
-    function setJugCount(n) {
-        numJugs = n;
-        updateJugCountUI();
-        const defaultCaps = [8, 5, 3, 2, 1];
-        const defaultStarts = [8, 0, 0, 0, 0];
-        const defaultGoals = [4, 4, 0, 0, 0];
-        renderInputRows(defaultCaps.slice(0, n), defaultStarts.slice(0, n), defaultGoals.slice(0, n));
-        triggerSolveAndSync();
-    }
-
-    function updateJugCountUI() {
-        for (let i = 2; i <= 5; i++) {
-            const btn = document.getElementById(`btn-count-${i}`);
-            if (btn) {
-                btn.style.backgroundColor = (i === numJugs) ? 'var(--accent-blue)' : '#1e293b';
-                btn.style.color = (i === numJugs) ? 'white' : 'var(--text-main)';
-            }
+    // --- DEFINISI PRESET TEMPLATE (RINGKAS DENGAN DESKRIPSI JELAS) ---
+    const PRESETS = {
+        'video': {
+            name: '8-5-3 (Target 4L)',
+            title: 'Teko 8-5-3 &rarr; Ukur 4 Liter',
+            tag: 'Kasus Klasik 3 Teko',
+            desc: 'Kasus klasik teka-teki pembagian air (8, 5, 3 L) dengan target 4 Liter. Menguji BFS (langkah terpendek) dan A*.',
+            numJugs: 3,
+            caps: [8, 5, 3],
+            start: [8, 0, 0],
+            targetAmt: 4
+        },
+        'contrast': {
+            name: '10-9-1 (Target 5L)',
+            title: 'Teko 10-9-1 &rarr; Ukur 5 Liter',
+            tag: 'Kontras BFS vs UCS',
+            desc: 'Kontras BFS vs UCS (10, 9, 1 L): BFS mencari langkah paling sedikit (8 langkah, 16L), sedangkan UCS mencari rute paling hemat liter tuang (9 langkah, 9L).',
+            numJugs: 3,
+            caps: [10, 9, 1],
+            start: [10, 0, 0],
+            targetAmt: 5
+        },
+        '4jugs': {
+            name: '12-8-5-3 (Target 6L)',
+            title: 'Teko 12-8-5-3 &rarr; Ukur 6 Liter',
+            tag: 'Kompleks 4 Teko',
+            desc: 'Simulasi 4 Teko (12, 8, 5, 3 L) dengan target 6 Liter. Menunjukkan efisiensi pemangkasan state oleh heuristik A*.',
+            numJugs: 4,
+            caps: [12, 8, 5, 3],
+            start: [12, 0, 0, 0],
+            targetAmt: 6
+        },
+        '5jugs': {
+            name: '16-9-7-5-2 (Target 8L)',
+            title: 'Teko 16-9-7-5-2 &rarr; Ukur 8 Liter',
+            tag: 'Tantangan 5 Teko',
+            desc: 'Simulasi 5 Teko (16, 9, 7, 5, 2 L) dengan target 8 Liter. Menguji skalabilitas algoritma pencarian pada ruang state multi-teko.',
+            numJugs: 5,
+            caps: [16, 9, 7, 5, 2],
+            start: [16, 0, 0, 0, 0],
+            targetAmt: 8
         }
-    }
+    };
 
-    function setTargetMode(mode) {
-        targetMode = mode;
-        updateTargetModeUI();
-        triggerSolveAndSync();
-    }
+    let activePresetKey = 'video';
+    let solverAbortController = null;
 
-    function updateTargetModeUI() {
-        document.getElementById('pill-target-single').classList.toggle('active', targetMode === 'single');
-        document.getElementById('pill-target-exact').classList.toggle('active', targetMode === 'exact');
-        document.getElementById('box-target-single').style.display = (targetMode === 'single') ? 'flex' : 'none';
-        document.getElementById('wrap-total-goal').style.display = (targetMode === 'exact') ? 'inline' : 'none';
-
-        // Tampilkan/sembunyikan input goal di kartu teko
-        document.querySelectorAll('.row-goal-input').forEach(el => {
-            el.style.display = (targetMode === 'exact') ? 'flex' : 'none';
+    function setActivePresetUI(presetKey) {
+        activePresetKey = presetKey;
+        const keys = ['video', 'contrast', '4jugs', '5jugs'];
+        keys.forEach(k => {
+            const btn = document.getElementById(`preset-btn-${k}`);
+            if (btn) {
+                if (k === presetKey) {
+                    btn.classList.add('highlight');
+                } else {
+                    btn.classList.remove('highlight');
+                }
+            }
         });
 
-        // Update teks HUD
-        if (targetMode === 'single') {
-            const amt = document.getElementById('input-target-amt').value || 4;
-            document.getElementById('hud-target-desc').textContent = `Ukur tepat ${amt} Liter pada salah satu teko`;
-        } else {
-            document.getElementById('hud-target-desc').textContent = `Capai kondisi akhir teko yang ditentukan`;
-        }
-    }
+        const tagEl = document.getElementById('preset-info-tag');
+        const titleEl = document.getElementById('preset-info-title');
+        const descEl = document.getElementById('preset-info-desc');
 
-    function renderInputRows(caps, starts, goals) {
-        const container = document.getElementById('jugs-inputs-container');
-        container.innerHTML = '';
-        for (let i = 0; i < numJugs; i++) {
-            const card = document.createElement('div');
-            card.className = 'jug-input-card';
-            card.innerHTML = `
-                <div class="jug-input-header">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-                    Teko ${i + 1}
-                </div>
-                <div class="row-input">
-                    <span>Kapasitas (L):</span>
-                    <input type="number" min="1" id="cap-${i}" value="${caps[i] || 5}" oninput="onInputChange()">
-                </div>
-                <div class="row-input">
-                    <span>Isi Awal (L):</span>
-                    <input type="number" min="0" id="start-${i}" value="${starts[i] || 0}" oninput="onInputChange()">
-                </div>
-                <div class="row-input row-goal-input" style="${targetMode === 'exact' ? 'display:flex;' : 'display:none;'}">
-                    <span>Target Goal (L):</span>
-                    <input type="number" min="0" id="goal-${i}" value="${goals[i] || 0}" oninput="onInputChange()">
-                </div>
-            `;
-            container.appendChild(card);
-        }
-    }
-
-    function onInputChange() {
-        if (targetMode === 'single') {
-            const amt = document.getElementById('input-target-amt').value || 4;
-            document.getElementById('hud-target-desc').textContent = `Ukur tepat ${amt} Liter pada salah satu teko`;
-        }
-        triggerSolveAndSync();
-    }
-
-    function triggerSolveAndSync() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            runSolvers();
-        }, 250);
-    }
-
-    function getFormValues() {
-        const caps = [], start = [], goal = [];
-        for (let i = 0; i < numJugs; i++) {
-            caps.push(parseInt(document.getElementById(`cap-${i}`).value) || 0);
-            start.push(parseInt(document.getElementById(`start-${i}`).value) || 0);
-            goal.push(parseInt(document.getElementById(`goal-${i}`).value) || 0);
-        }
-        const targetAmount = parseInt(document.getElementById('input-target-amt').value) || 4;
-        return { caps, start, goal, targetAmount };
-    }
-
-    function validateFrontendInputs() {
-        const { caps, start, goal, targetAmount } = getFormValues();
-        const sumStart = start.reduce((a, b) => a + b, 0);
-        const sumGoal = goal.reduce((a, b) => a + b, 0);
-
-        document.getElementById('lbl-total-start').textContent = `${sumStart} L`;
-        document.getElementById('lbl-total-goal').textContent = `${sumGoal} L`;
-
-        const statusEl = document.getElementById('lbl-validation-status');
-        const errorBanner = document.getElementById('error-banner');
-
-        let isValid = true;
-        let errorMsg = '';
-
-        for (let i = 0; i < numJugs; i++) {
-            if (caps[i] <= 0) {
-                isValid = false;
-                errorMsg = `Kapasitas Teko ${i + 1} harus lebih besar dari 0!`;
-                break;
+        if (PRESETS[presetKey]) {
+            const p = PRESETS[presetKey];
+            if (tagEl) {
+                tagEl.textContent = p.tag;
+                tagEl.style.color = '#fbbf24';
+                tagEl.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                tagEl.style.background = 'rgba(245, 158, 11, 0.15)';
             }
-            if (start[i] < 0 || start[i] > caps[i]) {
-                isValid = false;
-                errorMsg = `Isi awal Teko ${i + 1} (${start[i]}L) melebihi kapasitasnya (${caps[i]}L)!`;
-                break;
-            }
+            if (titleEl) titleEl.innerHTML = p.title;
+            if (descEl) descEl.textContent = p.desc;
         }
-
-        if (isValid && sumStart === 0) {
-            isValid = false;
-            errorMsg = 'Minimal harus ada salah satu teko yang berisi air!';
-        }
-
-        if (isValid) {
-            if (targetMode === 'single') {
-                if (targetAmount <= 0) {
-                    isValid = false;
-                    errorMsg = 'Target volume yang ingin diukur harus lebih dari 0 L!';
-                } else if (targetAmount > Math.max(...caps)) {
-                    isValid = false;
-                    errorMsg = `Target ${targetAmount}L melebihi kapasitas teko terbesar (${Math.max(...caps)}L)!`;
-                } else if (targetAmount > sumStart) {
-                    isValid = false;
-                    errorMsg = `Target ${targetAmount}L melebihi total air yang tersedia (${sumStart}L)!`;
-                }
-            } else {
-                for (let i = 0; i < numJugs; i++) {
-                    if (goal[i] < 0 || goal[i] > caps[i]) {
-                        isValid = false;
-                        errorMsg = `Isi target Teko ${i + 1} (${goal[i]}L) melebihi kapasitasnya (${caps[i]}L)!`;
-                        break;
-                    }
-                }
-                if (isValid && sumStart !== sumGoal) {
-                    isValid = false;
-                    errorMsg = `Total air goal (${sumGoal}L) tidak sama dengan air awal (${sumStart}L)! Menuang air tidak menambah/mengurangi volume total.`;
-                }
-            }
-        }
-
-        if (isValid) {
-            statusEl.className = 'status-valid';
-            statusEl.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Aturan Air Terpenuhi (${sumStart} L)
-            `;
-            errorBanner.style.display = 'none';
-        } else {
-            statusEl.className = 'status-invalid';
-            statusEl.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                Input Belum Tepat
-            `;
-            errorBanner.style.display = 'flex';
-            document.getElementById('error-text').textContent = errorMsg;
-        }
-
-        return isValid;
     }
 
-    // --- CALL BACKEND SOLVER ---
-    async function runSolvers() {
-        if (!validateFrontendInputs()) return;
-        const { caps, start, goal, targetAmount } = getFormValues();
+    function applyPreset(key) {
+        const p = PRESETS[key];
+        if (!p) return;
+
+        setActivePresetUI(key);
+        stopPlay();
+
+        numJugs = p.numJugs;
+
+        const hudTarget = document.getElementById('hud-target-desc');
+        if (hudTarget) hudTarget.textContent = `Ukur tepat ${p.targetAmt} Liter pada salah satu teko`;
+
+        const hudSummary = document.getElementById('hud-start-summary');
+        if (hudSummary) hudSummary.textContent = `${p.start[0]}L (Teko 1 Penuh)`;
+
+        currentStep = 0;
+        renderAIJugsStage(p.start, p.caps, null, null);
+        const lblCurrStep = document.getElementById('lbl-curr-step');
+        if (lblCurrStep) lblCurrStep.textContent = '0';
+        const scrubber = document.getElementById('scrubber');
+        if (scrubber) scrubber.value = 0;
+
+        runSolversForPreset(p);
+    }
+
+    // --- CALL BACKEND SOLVER FOR ACTIVE PRESET ---
+    async function runSolversForPreset(p) {
+        if (solverAbortController) {
+            solverAbortController.abort();
+        }
+        solverAbortController = new AbortController();
 
         try {
             const res = await fetch('/solve', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: solverAbortController.signal,
                 body: JSON.stringify({
-                    caps,
-                    start,
-                    target_mode: targetMode,
-                    target_amount: targetAmount,
-                    goal
+                    caps: p.caps,
+                    start: p.start,
+                    target_mode: 'single',
+                    target_amount: p.targetAmt,
+                    goal: []
                 })
             });
             const data = await res.json();
 
             if (!data.valid) {
-                document.getElementById('error-banner').style.display = 'flex';
-                document.getElementById('error-text').textContent = data.message;
+                console.error(data.message);
                 return;
             }
 
             solversData = data;
             renderComparisonTable(data);
-
-            // Inisialisasi ulang game pemain jika start berubah
-            playerInitialState = [...start];
-            resetPlayerGame();
-
-            if (currentMainMode === 'ai') {
-                selectAlgoTab(activeAlgo);
-            }
+            selectAlgoTab(activeAlgo);
 
         } catch (err) {
-            console.error(err);
-        }
-    }
-
-    // --- MODE SWITCHER (INTERACTIVE VS AI) ---
-    function switchMainMode(mode) {
-        currentMainMode = mode;
-        stopPlay();
-        selectedSourceJug = null;
-
-        document.getElementById('btn-mode-interactive').classList.toggle('active', mode === 'interactive');
-        document.getElementById('btn-mode-ai').classList.toggle('active', mode === 'ai');
-
-        document.getElementById('interactive-controls-section').style.display = (mode === 'interactive') ? 'flex' : 'none';
-        document.getElementById('ai-controls-section').style.display = (mode === 'ai') ? 'flex' : 'none';
-        document.getElementById('ai-inspect-section').style.display = (mode === 'ai') ? 'grid' : 'none';
-
-        document.getElementById('hud-interactive-stats').style.display = (mode === 'interactive') ? 'flex' : 'none';
-        document.getElementById('hud-ai-stats').style.display = (mode === 'ai') ? 'flex' : 'none';
-
-        if (mode === 'interactive') {
-            const caps = solversData ? solversData.caps : getFormValues().caps;
-            renderInteractiveJugs(playerCurrentState, caps);
-        } else {
-            selectAlgoTab(activeAlgo);
-        }
-    }
-
-    // ==============================================================================
-    // LOGIKA MODE 1: INTERAKTIF (COBA SENDIRI SEPERTI DI VIDEO SHORTS)
-    // ==============================================================================
-    function resetPlayerGame() {
-        const { start } = getFormValues();
-        playerInitialState = [...start];
-        playerCurrentState = [...start];
-        playerHistory = [];
-        playerTotalLiters = 0;
-        selectedSourceJug = null;
-
-        updatePlayerHUD();
-        const caps = solversData ? solversData.caps : getFormValues().caps;
-        renderInteractiveJugs(playerCurrentState, caps);
-    }
-
-    function updatePlayerHUD() {
-        document.getElementById('player-move-count').textContent = playerHistory.length;
-        document.getElementById('player-liter-count').textContent = `${playerTotalLiters} L`;
-        document.getElementById('btn-undo').disabled = (playerHistory.length === 0);
-    }
-
-    function onJugClick(jugIndex) {
-        if (currentMainMode !== 'interactive') return;
-        const { caps } = getFormValues();
-
-        // 1. Jika belum ada teko sumber yang dipilih:
-        if (selectedSourceJug === null) {
-            if (playerCurrentState[jugIndex] === 0) {
-                showPourIndicator(`Teko ${jugIndex + 1} kosong! Pilih teko yang memiliki air.`);
-                return;
-            }
-            selectedSourceJug = jugIndex;
-            showPourIndicator(`Teko ${jugIndex + 1} dipilih. Sekarang klik teko tujuan untuk menuang air.`);
-            renderInteractiveJugs(playerCurrentState, caps);
-            return;
-        }
-
-        // 2. Jika mengklik teko yang sama -> batalkan pilihan
-        if (selectedSourceJug === jugIndex) {
-            selectedSourceJug = null;
-            hidePourIndicator();
-            renderInteractiveJugs(playerCurrentState, caps);
-            return;
-        }
-
-        // 3. Eksekusi tuang dari teko sumber ke teko tujuan
-        const src = selectedSourceJug;
-        const dst = jugIndex;
-
-        if (playerCurrentState[dst] >= caps[dst]) {
-            showPourIndicator(`Teko ${dst + 1} sudah penuh (${caps[dst]}L)! Pilih teko lain.`);
-            return;
-        }
-
-        const amount = Math.min(playerCurrentState[src], caps[dst] - playerCurrentState[dst]);
-        if (amount <= 0) {
-            showPourIndicator(`Tidak bisa menuang air ke Teko ${dst + 1}.`);
-            return;
-        }
-
-        // Simpan riwayat untuk Undo
-        playerHistory.push({
-            state: [...playerCurrentState],
-            poured: amount,
-            src: src,
-            dst: dst
-        });
-
-        playerCurrentState[src] -= amount;
-        playerCurrentState[dst] += amount;
-        playerTotalLiters += amount;
-        selectedSourceJug = null;
-
-        updatePlayerHUD();
-        showPourIndicator(`Menuang ${amount}L dari Teko ${src + 1} ke Teko ${dst + 1}`);
-        renderInteractiveJugs(playerCurrentState, caps);
-
-        // Cek apakah target teka-teki tercapai!
-        checkPlayerVictory();
-    }
-
-    function undoPlayerMove() {
-        if (playerHistory.length === 0) return;
-        const last = playerHistory.pop();
-        playerCurrentState = [...last.state];
-        playerTotalLiters = Math.max(0, playerTotalLiters - last.poured);
-        selectedSourceJug = null;
-
-        updatePlayerHUD();
-        showPourIndicator('Langkah terakhir dibatalkan.');
-        const caps = solversData ? solversData.caps : getFormValues().caps;
-        renderInteractiveJugs(playerCurrentState, caps);
-    }
-
-    function givePlayerHint() {
-        if (!solversData || !solversData.bfs || !solversData.bfs.found) {
-            alert('Tidak ditemukan jalur solusi untuk konfigurasi ini.');
-            return;
-        }
-
-        const path = solversData.bfs.path;
-        // Cari langkah optimal berikutnya dari current state jika ada di jalur solusi
-        const currStr = playerCurrentState.join(',');
-        let matchIdx = -1;
-        for (let i = 0; i < path.length; i++) {
-            if (path[i].state.join(',') === currStr) {
-                matchIdx = i;
-                break;
+            if (err.name !== 'AbortError') {
+                console.error(err);
             }
         }
-
-        if (matchIdx !== -1 && matchIdx < path.length - 1) {
-            const nextMove = path[matchIdx + 1];
-            showPourIndicator(`💡 Petunjuk: ${nextMove.action}`);
-            selectedSourceJug = nextMove.src;
-            const caps = solversData.caps;
-            renderInteractiveJugs(playerCurrentState, caps);
-        } else {
-            showPourIndicator(`💡 Petunjuk: Kembali ke awal atau ikuti solusi AI (${solversData.bfs.steps} langkah optimal).`);
-        }
-    }
-
-    function checkPlayerVictory() {
-        const { targetAmount, goal } = getFormValues();
-        let isWin = false;
-
-        if (targetMode === 'single') {
-            isWin = playerCurrentState.some(v => v === targetAmount);
-        } else {
-            isWin = playerCurrentState.every((v, i) => v === goal[i]);
-        }
-
-        if (isWin) {
-            setTimeout(() => {
-                const optimalSteps = (solversData && solversData.bfs && solversData.bfs.found) ? solversData.bfs.steps : '-';
-                document.getElementById('victory-msg').innerHTML = `
-                    Anda berhasil menyelesaikan teka-teki dalam <b>${playerHistory.length} langkah</b> (${playerTotalLiters} L air dipindah)!<br>
-                    <span style="font-size:12px; color:var(--accent-cyan);">Solusi optimal AI: ${optimalSteps} langkah.</span>
-                `;
-                document.getElementById('victory-modal').style.display = 'flex';
-            }, 300);
-        }
-    }
-
-    function closeVictoryModal() {
-        document.getElementById('victory-modal').style.display = 'none';
     }
 
     function showPourIndicator(text) {
@@ -2081,8 +1776,6 @@ HTML_TEMPLATE = """
 
     // Helper untuk ukuran relatif teko (Scaling per 2 L)
     function getJugDimensions(cap) {
-        // Setiap 2 L kapasitas menambah tinggi teko sebesar 30px dan lebar 6px
-        // Base: 90px height, 76px width
         const height = Math.round(90 + (cap / 2.0) * 30);
         const width = Math.round(76 + Math.min(36, (cap / 2.0) * 6));
         return { height, width };
@@ -2096,8 +1789,6 @@ HTML_TEMPLATE = """
             const isStep2L = (t % 2 === 0);
 
             if (isStep2L) {
-                // Teks HANYA ditampilkan ketika kelipatan 2 saja
-                // Pastikan teks tidak terpotong jika dekat bibir atas (misal t === cap)
                 let labelStyle = `bottom:${bPct}%;`;
                 if (bPct >= 90) {
                     labelStyle = 'top: 3px; transform: none;';
@@ -2120,57 +1811,8 @@ HTML_TEMPLATE = """
         return ticksHtml;
     }
 
-    function renderInteractiveJugs(state, caps) {
-        const stageArea = document.getElementById('jugs-render-area');
-        stageArea.innerHTML = '';
-        const { targetAmount, goal } = getFormValues();
-
-        for (let i = 0; i < state.length; i++) {
-            const vol = state[i];
-            const cap = caps[i];
-            const pct = Math.min(100, Math.round((vol / cap) * 100));
-            const dim = getJugDimensions(cap);
-            const ticksHtml = getMeasuringScaleHtml(cap);
-
-            const isSource = (selectedSourceJug === i);
-            const isPotentialTarget = (selectedSourceJug !== null && selectedSourceJug !== i && vol < cap);
-            
-            let isTargetAchieved = false;
-            if (targetMode === 'single') {
-                isTargetAchieved = (vol === targetAmount);
-            } else {
-                isTargetAchieved = (vol === goal[i]);
-            }
-
-            const item = document.createElement('div');
-            item.className = 'jug-item';
-            if (isSource) item.classList.add('selected-source');
-            if (isPotentialTarget) item.classList.add('potential-target');
-            if (isTargetAchieved) item.classList.add('target-reached');
-
-            item.onclick = () => onJugClick(i);
-
-            item.innerHTML = `
-                <div class="jug-tag-badge">Sumber Tuang</div>
-                <div class="jug-win-badge">Target (${vol}L)</div>
-                <div class="jug-header-label">
-                    Teko ${i + 1} (${cap}L)
-                </div>
-                <div class="jug-glass-body" style="height:${dim.height}px; width:${dim.width}px;">
-                    <div class="jug-measuring-scale">${ticksHtml}</div>
-                    <div class="water-fill" style="height:${pct}%;">
-                        <div class="water-wave-top"></div>
-                    </div>
-                </div>
-                <div class="jug-badge-info" style="min-width:${dim.width}px;">${vol} / ${cap} L</div>
-            `;
-            stageArea.appendChild(item);
-        }
-    }
-
-
     // ==============================================================================
-    // LOGIKA MODE 2: SIMULASI AI SEARCH (BFS, UCS, A*)
+    // SIMULASI AI SEARCH (BFS, UCS, A*)
     // ==============================================================================
     function renderComparisonTable(data) {
         const tbody = document.getElementById('comparison-tbody');
@@ -2185,7 +1827,7 @@ HTML_TEMPLATE = """
         algos.forEach(a => {
             const res = data[a.key];
             const isRowActive = a.key === activeAlgo ? 'class="active-row"' : '';
-            if (!res.found) {
+            if (!res || !res.found) {
                 tbody.innerHTML += `
                     <tr ${isRowActive} onclick="selectAlgoTab('${a.key}')">
                         <td>
@@ -2233,6 +1875,7 @@ HTML_TEMPLATE = """
         renderComparisonTable(solversData);
 
         const chosen = solversData[algoKey];
+        if (!chosen) return;
         const path = chosen.path || [];
 
         document.getElementById('lbl-step-count').textContent = chosen.found ? `${chosen.steps} Langkah (${chosen.total_liters} L)` : 'Tidak ada solusi';
@@ -2247,8 +1890,9 @@ HTML_TEMPLATE = """
         if (!chosen.found || path.length === 0) {
             stopPlay();
             currentStep = 0;
-            const caps = solversData.caps || getFormValues().caps;
-            const start = solversData.start || getFormValues().start;
+            const p = PRESETS[activePresetKey] || PRESETS['video'];
+            const caps = (solversData && solversData.caps) || p.caps;
+            const start = (solversData && solversData.start) || p.start;
             renderAIJugsStage(start, caps, null, null);
 
             const badge = document.getElementById('step-badge');
@@ -2310,7 +1954,8 @@ HTML_TEMPLATE = """
     function renderAIJugsStage(state, caps, src, dst) {
         const stageArea = document.getElementById('jugs-render-area');
         stageArea.innerHTML = '';
-        const { targetAmount, goal } = getFormValues();
+        const p = PRESETS[activePresetKey] || PRESETS['video'];
+        const targetAmount = (solversData && solversData.target_amount) ? solversData.target_amount : p.targetAmt;
 
         for (let i = 0; i < state.length; i++) {
             const vol = state[i];
@@ -2321,13 +1966,7 @@ HTML_TEMPLATE = """
 
             const isSource = (src !== null && src === i);
             const isTarget = (dst !== null && dst === i);
-
-            let isTargetAchieved = false;
-            if (targetMode === 'single') {
-                isTargetAchieved = (vol === targetAmount);
-            } else {
-                isTargetAchieved = (vol === goal[i]);
-            }
+            const isTargetAchieved = (vol === targetAmount);
 
             const item = document.createElement('div');
             item.className = 'jug-item';
@@ -2471,8 +2110,8 @@ HTML_TEMPLATE = """
         }
     }
 
-    // Inisialisasi awal dengan Preset Video Shorts (8, 5, 3 &rarr; Ukur 4L)
-    loadVideoShortsPreset();
+    // Inisialisasi awal dengan Preset Video 8-5-3 (Target 4L)
+    applyPreset('video');
 </script>
 </body>
 </html>
@@ -2489,7 +2128,11 @@ def index():
 def solve():
     req = request.get_json() or {}
     caps = [int(x) for x in req.get("caps", [8, 5, 3])]
-    start = [int(x) for x in req.get("start", [8, 0, 0])]
+    start_req = req.get("start")
+    if start_req and len(start_req) == len(caps):
+        start = [int(x) for x in start_req]
+    else:
+        start = [caps[0]] + [0] * (len(caps) - 1)
     target_mode = req.get("target_mode", "single")
     target_amount = int(req.get("target_amount", 4))
     goal = [int(x) for x in req.get("goal", [4, 4, 0])]
