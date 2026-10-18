@@ -90,7 +90,22 @@ Visualisasi menampilkan lima hal supaya proses pencarian terlihat, bukan hanya h
 
 ---
 
-## 9. Panduan Menjalankan Program
+## 9. Mode Penggunaan Aplikasi
+
+### 🕹️ Mode 1: Coba Sendiri (Teka-Teki Interaktif)
+- **Mekanisme Persis Video Puzzle (8–5–3 Variation):**
+  - Klik **Teko Asal** (berisi air) lalu klik **Teko Tujuan** untuk menuang air.
+  - Air berpindah secara otomatis sesuai sisa kapasitas atau ketersediaan air.
+  - Dilengkapi tombol **Undo (Batalkan Langkah)**, **Reset**, dan **Hint (Petunjuk Langkah Optimal)**.
+  - Saat volume target (misal: 4 Liter) tercapai di salah satu teko, modal ucapan selamat akan muncul beserta perbandingan langkah pemain vs solusi optimal AI.
+
+### 🤖 Mode 2: Visualisasi AI (BFS, UCS, A*)
+- Menjalankan pencarian solusi optimal secara otomatis dengan playback animasi (*Play*, *Pause*, *Next*, *Prev*, slider kecepatan).
+- Menampilkan narasi langkah per langkah, evaluasi node ($g, h, f$), daftar OPEN/CLOSED, serta tabel perbandingan metrik ketiga algoritma.
+
+---
+
+## 10. Panduan Menjalankan Program
 
 ### 1. Buka Terminal / PowerShell
 ```bash
@@ -99,9 +114,10 @@ cd "d:\Koding-serius\KKA\ETS"
 
 ### 2. Jalankan Server Flask
 ```bash
-python ETS.py
+python app.py
 ```
 
 ### 3. Akses Melalui Browser
 Buka peramban web dan akses:
 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
+
