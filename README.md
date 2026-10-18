@@ -107,17 +107,39 @@ Visualisasi menampilkan lima hal supaya proses pencarian terlihat, bukan hanya h
 
 ## 10. Panduan Menjalankan Program
 
-### 1. Buka Terminal / PowerShell
+### 1. Clone Repositori
+Buka Terminal / Command Prompt / PowerShell, lalu jalankan:
 ```bash
-cd "d:\Koding-serius\KKA\ETS"
+git clone https://github.com/RellZM/ETS-KKA.git
+cd ETS-KKA
 ```
 
-### 2. Jalankan Server Flask
+### 2. (Opsional) Siapkan Virtual Environment
+Disarankan menggunakan virtual environment agar dependensi terisolasi:
+```bash
+python -m venv venv
+
+# Windows (PowerShell / Command Prompt):
+.\venv\Scripts\activate
+
+# macOS / Linux:
+source venv/bin/activate
+```
+
+### 3. Install Dependensi
+Install paket yang diperlukan yang tercantum pada `requirements.txt`:
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Jalankan Aplikasi
+Jalankan server aplikasi web Flask:
 ```bash
 python app.py
 ```
 
-### 3. Akses Melalui Browser
-Buka peramban web dan akses:
+### 5. Akses Melalui Browser
+Buka peramban web dan kunjungi alamat lokal:
 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
+
 
