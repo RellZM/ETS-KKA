@@ -561,6 +561,12 @@ HTML_TEMPLATE = """
             align-items: center;
             flex-wrap: wrap;
             gap: 8px;
+            margin-bottom: 0px;
+            padding-bottom: 0px;
+            border-bottom: none;
+            transition: all 0.2s ease;
+        }
+        .presets-bar.with-border {
             margin-bottom: 16px;
             padding-bottom: 14px;
             border-bottom: 1px solid #1e293b;
@@ -578,6 +584,7 @@ HTML_TEMPLATE = """
             align-items: center;
             gap: 6px;
             transition: all 0.15s ease;
+            user-select: none;
         }
         .preset-chip:hover {
             border-color: var(--accent-cyan);
@@ -586,8 +593,47 @@ HTML_TEMPLATE = """
         }
         .preset-chip.highlight {
             border-color: var(--accent-amber);
-            background-color: rgba(245, 158, 11, 0.15);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(245, 158, 11, 0.1));
             color: #fbbf24;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+            font-weight: 700;
+        }
+        .active-template-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #fbbf24;
+            margin-left: auto;
+            letter-spacing: 0.2px;
+            transition: all 0.2s ease;
+        }
+        .active-template-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: #fbbf24;
+            box-shadow: 0 0 8px #fbbf24;
+            animation: pulse-dot 2s infinite ease-in-out;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(0.8); }
+        }
+        .active-template-badge.custom {
+            background: rgba(148, 163, 184, 0.08);
+            border-color: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
+        .active-template-badge.custom .active-template-dot {
+            background-color: #94a3b8;
+            box-shadow: none;
+            animation: none;
         }
 
         /* Target Mode Selector Tabs */
@@ -1281,6 +1327,10 @@ HTML_TEMPLATE = """
             from { transform: scale(0.85); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -1318,80 +1368,92 @@ HTML_TEMPLATE = """
         <!-- CONFIGURATION CARD -->
         <div class="solid-card">
             <!-- PRESETS LIST -->
-            <div class="presets-bar">
+            <div class="presets-bar" id="presets-bar">
                 <span style="font-size:12px; font-weight:700; color:var(--text-muted); margin-right:4px;">Preset:</span>
-                <button class="preset-chip highlight" onclick="loadVideoShortsPreset()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <button class="preset-chip highlight" id="preset-btn-video" onclick="loadVideoShortsPreset()">
                     Teka-teki Video (8-5-3 Ukur 4L)
                 </button>
-                <button class="preset-chip" onclick="loadPoissonPreset()">
+                <button class="preset-chip" id="preset-btn-poisson" onclick="loadPoissonPreset()">
                     Poisson Klasik (8, 5, 3 &rarr; [4, 4, 0])
                 </button>
-                <button class="preset-chip" onclick="loadContrastPreset()">
+                <button class="preset-chip" id="preset-btn-contrast" onclick="loadContrastPreset()">
                     Kontras BFS vs UCS (10, 9, 1 &rarr; [5, 5, 0])
                 </button>
-                <button class="preset-chip" onclick="load4JugsPreset()">
+                <button class="preset-chip" id="preset-btn-4jugs" onclick="load4JugsPreset()">
                     4 Teko (12, 8, 5, 3 &rarr; Ukur 6L)
                 </button>
-                <button class="preset-chip" onclick="load2JugsPreset()">
+                <button class="preset-chip" id="preset-btn-2jugs" onclick="load2JugsPreset()">
                     2 Teko (7, 4 &rarr; Ukur 3L)
                 </button>
-            </div>
+                <button class="preset-chip" id="preset-btn-custom" onclick="loadCustomPuzzlePreset()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Custom Puzzle
+                </button>
 
-            <!-- TARGET MODE SELECTOR -->
-            <div class="target-mode-row">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:13px; font-weight:700; color:var(--text-muted);">Jumlah Teko:</span>
-                    <button class="preset-chip" id="btn-count-2" onclick="setJugCount(2)">2</button>
-                    <button class="preset-chip" id="btn-count-3" onclick="setJugCount(3)">3</button>
-                    <button class="preset-chip" id="btn-count-4" onclick="setJugCount(4)">4</button>
-                    <button class="preset-chip" id="btn-count-5" onclick="setJugCount(5)">5</button>
-                </div>
-
-                <div class="target-pills">
-                    <button class="target-pill-btn active" id="pill-target-single" onclick="setTargetMode('single')">
-                        Target Sederhana (Ukur X Liter)
-                    </button>
-                    <button class="target-pill-btn" id="pill-target-exact" onclick="setTargetMode('exact')">
-                        Target Spesifik Tiap Teko (Exact State)
-                    </button>
+                <!-- Status Template Aktif -->
+                <div id="active-template-badge" class="active-template-badge">
+                    <span class="active-template-dot"></span>
+                    <span id="active-template-text">Template: Teka-teki Video (8-5-3 Ukur 4L)</span>
                 </div>
             </div>
 
-            <!-- TARGET SEDERHANA (SINGLE VOLUME) - PERSIS VIDEO -->
-            <div class="single-target-box" id="box-target-single">
-                <div class="single-target-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-                    Tujuan Teka-Teki: Ukur volume air di salah satu teko
-                </div>
-                <div class="single-target-control">
-                    <span style="font-size:13px; font-weight:600; color:var(--text-muted);">Target Volume:</span>
-                    <input type="number" id="input-target-amt" class="input-target-amt" min="1" value="4" oninput="onInputChange()">
-                    <span style="font-size:14px; font-weight:700; color:var(--accent-cyan);">Liter</span>
-                </div>
-            </div>
+            <!-- CUSTOM PUZZLE CONFIGURATION (Hanya muncul jika menu Custom Puzzle diklik) -->
+            <div id="custom-puzzle-editor" style="display: none; animation: fadeIn 0.25s ease;">
+                <!-- TARGET MODE SELECTOR -->
+                <div class="target-mode-row">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:13px; font-weight:700; color:var(--text-muted);">Jumlah Teko:</span>
+                        <button class="preset-chip" id="btn-count-2" onclick="setJugCount(2)">2</button>
+                        <button class="preset-chip" id="btn-count-3" onclick="setJugCount(3)">3</button>
+                        <button class="preset-chip" id="btn-count-4" onclick="setJugCount(4)">4</button>
+                        <button class="preset-chip" id="btn-count-5" onclick="setJugCount(5)">5</button>
+                    </div>
 
-            <!-- DYNAMIC JUG INPUTS GRID -->
-            <div class="jugs-input-grid" id="jugs-inputs-container">
-                <!-- Dynamically populated -->
-            </div>
-
-            <!-- WATER CONSERVATION & VALIDATION STATUS -->
-            <div class="water-sum-bar">
-                <div style="display:flex; gap:16px; align-items:center;">
-                    <span>Total Air Awal: <b id="lbl-total-start" class="mono" style="color:var(--accent-cyan);">8 L</b></span>
-                    <span id="wrap-total-goal" style="display:none;">Total Air Goal: <b id="lbl-total-goal" class="mono" style="color:var(--accent-cyan);">8 L</b></span>
+                    <div class="target-pills">
+                        <button class="target-pill-btn active" id="pill-target-single" onclick="setTargetMode('single')">
+                            Target Sederhana (Ukur X Liter)
+                        </button>
+                        <button class="target-pill-btn" id="pill-target-exact" onclick="setTargetMode('exact')">
+                            Target Spesifik Tiap Teko (Exact State)
+                        </button>
+                    </div>
                 </div>
-                <div id="lbl-validation-status" class="status-valid">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    Siap Disimulasikan
-                </div>
-            </div>
 
-            <!-- ERROR BANNER -->
-            <div id="error-banner">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span id="error-text">Pesan kesalahan</span>
+                <!-- TARGET SEDERHANA (SINGLE VOLUME) - PERSIS VIDEO -->
+                <div class="single-target-box" id="box-target-single">
+                    <div class="single-target-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                        Tujuan Teka-Teki: Ukur volume air di salah satu teko
+                    </div>
+                    <div class="single-target-control">
+                        <span style="font-size:13px; font-weight:600; color:var(--text-muted);">Target Volume:</span>
+                        <input type="number" id="input-target-amt" class="input-target-amt" min="1" value="4" oninput="onInputChange()">
+                        <span style="font-size:14px; font-weight:700; color:var(--accent-cyan);">Liter</span>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC JUG INPUTS GRID -->
+                <div class="jugs-input-grid" id="jugs-inputs-container">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <!-- WATER CONSERVATION & VALIDATION STATUS -->
+                <div class="water-sum-bar">
+                    <div style="display:flex; gap:16px; align-items:center;">
+                        <span>Total Air Awal: <b id="lbl-total-start" class="mono" style="color:var(--accent-cyan);">8 L</b></span>
+                        <span id="wrap-total-goal" style="display:none;">Total Air Goal: <b id="lbl-total-goal" class="mono" style="color:var(--accent-cyan);">8 L</b></span>
+                    </div>
+                    <div id="lbl-validation-status" class="status-valid">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Siap Disimulasikan
+                    </div>
+                </div>
+
+                <!-- ERROR BANNER -->
+                <div id="error-banner">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span id="error-text">Pesan kesalahan</span>
+                </div>
             </div>
         </div>
 
@@ -1623,63 +1685,184 @@ HTML_TEMPLATE = """
     let playSpeed = 900;
     let debounceTimer = null;
 
-    // --- INISIALISASI & PRESET ---
-    function loadVideoShortsPreset() {
-        targetMode = 'single';
-        updateTargetModeUI();
-        numJugs = 3;
-        updateJugCountUI();
-        document.getElementById('input-target-amt').value = 4;
-        renderInputRows([8, 5, 3], [8, 0, 0], [4, 4, 0]);
-        triggerSolveAndSync();
+    // --- DEFINISI PRESET TEMPLATE & AKTIVASI INSTAN ---
+    const PRESETS = {
+        'video': {
+            name: 'Teka-teki Video (8-5-3 Ukur 4L)',
+            targetMode: 'single',
+            numJugs: 3,
+            targetAmt: 4,
+            caps: [8, 5, 3],
+            start: [8, 0, 0],
+            goal: [4, 4, 0]
+        },
+        'poisson': {
+            name: 'Poisson Klasik (8, 5, 3 → [4, 4, 0])',
+            targetMode: 'exact',
+            numJugs: 3,
+            targetAmt: 4,
+            caps: [8, 5, 3],
+            start: [8, 0, 0],
+            goal: [4, 4, 0]
+        },
+        'contrast': {
+            name: 'Kontras BFS vs UCS (10, 9, 1 → [5, 5, 0])',
+            targetMode: 'exact',
+            numJugs: 3,
+            targetAmt: 5,
+            caps: [10, 9, 1],
+            start: [10, 0, 0],
+            goal: [5, 5, 0]
+        },
+        '4jugs': {
+            name: '4 Teko (12, 8, 5, 3 → Ukur 6L)',
+            targetMode: 'single',
+            numJugs: 4,
+            targetAmt: 6,
+            caps: [12, 8, 5, 3],
+            start: [12, 0, 0, 0],
+            goal: [6, 6, 0, 0]
+        },
+        '2jugs': {
+            name: '2 Teko (7, 4 → Ukur 3L)',
+            targetMode: 'single',
+            numJugs: 2,
+            targetAmt: 3,
+            caps: [7, 4],
+            start: [7, 0],
+            goal: [3, 4]
+        }
+    };
+
+    let activePresetKey = 'video';
+    let solverAbortController = null;
+
+    function setActivePresetUI(presetKey) {
+        activePresetKey = presetKey;
+        const keys = ['video', 'poisson', 'contrast', '4jugs', '2jugs', 'custom'];
+        keys.forEach(k => {
+            const btn = document.getElementById(`preset-btn-${k}`);
+            if (btn) {
+                if (k === presetKey) {
+                    btn.classList.add('highlight');
+                } else {
+                    btn.classList.remove('highlight');
+                }
+            }
+        });
+
+        // Tampilkan konfigurasi hanya jika mode Custom Puzzle dipilih, jika preset maka disembunyikan
+        const editor = document.getElementById('custom-puzzle-editor');
+        if (editor) {
+            editor.style.display = (presetKey === 'custom') ? 'block' : 'none';
+        }
+
+        const presetsBar = document.getElementById('presets-bar');
+        if (presetsBar) {
+            presetsBar.classList.toggle('with-border', presetKey === 'custom');
+        }
+
+        const badge = document.getElementById('active-template-badge');
+        const textEl = document.getElementById('active-template-text');
+        if (badge && textEl) {
+            if (presetKey === 'custom') {
+                badge.className = 'active-template-badge custom';
+                textEl.textContent = 'Mode: Custom Puzzle';
+            } else if (PRESETS[presetKey]) {
+                badge.className = 'active-template-badge';
+                textEl.textContent = `Template: ${PRESETS[presetKey].name}`;
+            }
+        }
     }
 
-    function loadPoissonPreset() {
-        targetMode = 'exact';
-        updateTargetModeUI();
-        numJugs = 3;
-        updateJugCountUI();
-        renderInputRows([8, 5, 3], [8, 0, 0], [4, 4, 0]);
-        triggerSolveAndSync();
+    function loadCustomPuzzlePreset() {
+        setActivePresetUI('custom');
+        const container = document.getElementById('jugs-inputs-container');
+        if (!container || container.children.length === 0) {
+            const { caps, start, goal } = getFormValues();
+            renderInputRows(caps, start, goal);
+        }
     }
 
-    function loadContrastPreset() {
-        targetMode = 'exact';
+    function applyPreset(key) {
+        const p = PRESETS[key];
+        if (!p) return;
+
+        // 1. Langsung ubah highlight & badge seketika (0ms delay) dan sembunyikan menu kustom
+        setActivePresetUI(key);
+
+        // 2. Hentikan pemutaran animasi / aksi yang sedang berjalan
+        stopPlay();
+        selectedSourceJug = null;
+
+        // 3. Set konfigurasi state
+        targetMode = p.targetMode;
+        numJugs = p.numJugs;
+
         updateTargetModeUI();
-        numJugs = 3;
         updateJugCountUI();
-        renderInputRows([10, 9, 1], [10, 0, 0], [5, 5, 0]);
-        triggerSolveAndSync();
+
+        const amtInput = document.getElementById('input-target-amt');
+        if (amtInput) amtInput.value = p.targetAmt;
+
+        renderInputRows(p.caps, p.start, p.goal);
+
+        // 4. Update visual langsung tanpa delay (0ms)
+        playerInitialState = [...p.start];
+        playerCurrentState = [...p.start];
+        playerHistory = [];
+        playerTotalLiters = 0;
+        updatePlayerHUD();
+
+        if (currentMainMode === 'interactive') {
+            renderInteractiveJugs(playerCurrentState, p.caps);
+        } else {
+            currentStep = 0;
+            renderAIJugsStage(p.start, p.caps, null, null);
+            document.getElementById('lbl-curr-step').textContent = '0';
+            const scrubber = document.getElementById('scrubber');
+            if (scrubber) scrubber.value = 0;
+        }
+
+        // 5. Jalankan backend solver langsung tanpa jeda debounce 250ms
+        triggerSolveAndSync(true);
     }
 
-    function load4JugsPreset() {
-        targetMode = 'single';
-        updateTargetModeUI();
-        numJugs = 4;
-        updateJugCountUI();
-        document.getElementById('input-target-amt').value = 6;
-        renderInputRows([12, 8, 5, 3], [12, 0, 0, 0], [6, 6, 0, 0]);
-        triggerSolveAndSync();
-    }
-
-    function load2JugsPreset() {
-        targetMode = 'single';
-        updateTargetModeUI();
-        numJugs = 2;
-        updateJugCountUI();
-        document.getElementById('input-target-amt').value = 3;
-        renderInputRows([7, 4], [7, 0], [3, 4]);
-        triggerSolveAndSync();
-    }
+    function loadVideoShortsPreset() { applyPreset('video'); }
+    function loadPoissonPreset() { applyPreset('poisson'); }
+    function loadContrastPreset() { applyPreset('contrast'); }
+    function load4JugsPreset() { applyPreset('4jugs'); }
+    function load2JugsPreset() { applyPreset('2jugs'); }
 
     function setJugCount(n) {
+        setActivePresetUI('custom');
+        stopPlay();
+        selectedSourceJug = null;
         numJugs = n;
         updateJugCountUI();
         const defaultCaps = [8, 5, 3, 2, 1];
         const defaultStarts = [8, 0, 0, 0, 0];
         const defaultGoals = [4, 4, 0, 0, 0];
-        renderInputRows(defaultCaps.slice(0, n), defaultStarts.slice(0, n), defaultGoals.slice(0, n));
-        triggerSolveAndSync();
+        const caps = defaultCaps.slice(0, n);
+        const starts = defaultStarts.slice(0, n);
+        const goals = defaultGoals.slice(0, n);
+        renderInputRows(caps, starts, goals);
+
+        playerInitialState = [...starts];
+        playerCurrentState = [...starts];
+        playerHistory = [];
+        playerTotalLiters = 0;
+        updatePlayerHUD();
+        if (currentMainMode === 'interactive') {
+            renderInteractiveJugs(playerCurrentState, caps);
+        } else {
+            currentStep = 0;
+            renderAIJugsStage(starts, caps, null, null);
+            document.getElementById('lbl-curr-step').textContent = '0';
+            const scrubber = document.getElementById('scrubber');
+            if (scrubber) scrubber.value = 0;
+        }
+        triggerSolveAndSync(true);
     }
 
     function updateJugCountUI() {
@@ -1693,9 +1876,10 @@ HTML_TEMPLATE = """
     }
 
     function setTargetMode(mode) {
+        setActivePresetUI('custom');
         targetMode = mode;
         updateTargetModeUI();
-        triggerSolveAndSync();
+        triggerSolveAndSync(true);
     }
 
     function updateTargetModeUI() {
@@ -1747,18 +1931,23 @@ HTML_TEMPLATE = """
     }
 
     function onInputChange() {
+        setActivePresetUI('custom');
         if (targetMode === 'single') {
             const amt = document.getElementById('input-target-amt').value || 4;
             document.getElementById('hud-target-desc').textContent = `Ukur tepat ${amt} Liter pada salah satu teko`;
         }
-        triggerSolveAndSync();
+        triggerSolveAndSync(false);
     }
 
-    function triggerSolveAndSync() {
+    function triggerSolveAndSync(immediate = false) {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
+        if (immediate) {
             runSolvers();
-        }, 250);
+        } else {
+            debounceTimer = setTimeout(() => {
+                runSolvers();
+            }, 250);
+        }
     }
 
     function getFormValues() {
@@ -1856,10 +2045,16 @@ HTML_TEMPLATE = """
         if (!validateFrontendInputs()) return;
         const { caps, start, goal, targetAmount } = getFormValues();
 
+        if (solverAbortController) {
+            solverAbortController.abort();
+        }
+        solverAbortController = new AbortController();
+
         try {
             const res = await fetch('/solve', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: solverAbortController.signal,
                 body: JSON.stringify({
                     caps,
                     start,
@@ -1879,16 +2074,17 @@ HTML_TEMPLATE = """
             solversData = data;
             renderComparisonTable(data);
 
-            // Inisialisasi ulang game pemain jika start berubah
-            playerInitialState = [...start];
-            resetPlayerGame();
-
             if (currentMainMode === 'ai') {
                 selectAlgoTab(activeAlgo);
+            } else if (currentMainMode === 'interactive') {
+                const activeCaps = data.caps || caps;
+                renderInteractiveJugs(playerCurrentState, activeCaps);
             }
 
         } catch (err) {
-            console.error(err);
+            if (err.name !== 'AbortError') {
+                console.error(err);
+            }
         }
     }
 
