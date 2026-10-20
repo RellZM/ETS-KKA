@@ -9,19 +9,35 @@ app = Flask(__name__)
 # ==============================================================================
 # BAGIAN 1: LOGIKA AI SEARCH - WATER JUG PROBLEM (BFS, UCS, A*)
 # ==============================================================================
-# Mendukung 2 Mode Target:
-# 1. 'single': Mengukur volume tertentu (misal: 4 Liter) di sembarang teko (seperti video short).
-# 2. 'exact' : Mencapai state konfigurasi teko tertentu (misal: (4, 4, 0)).
+# Mendukung 3 Operator Lengkap:
+# 1. Fill  : Isi penuh teko i dari keran
+# 2. Empty : Buang seluruh isi teko i (kosongkan)
+# 3. Pour  : Pindahkan isi teko i ke teko j (hingga teko i kosong atau teko j penuh)
+# Start State: Semua teko kosong (0, 0, ..., 0)
+# Goal State : Target volume air tercapai di salah satu teko (single goal)
 # ==============================================================================
 
 def get_neighbors(state, caps):
     """
-    Membangkitkan semua transisi tuang yang valid dari teko i ke teko j.
-    Operator tunggal: Menuang dari Teko i ke Teko j (i != j).
-    Jumlah air yang dipindah: min(isi_i, kapasitas_j - isi_j).
+    Membangkitkan semua transisi aksi yang valid dari state saat ini:
+    1. Isi penuh teko i dari keran (Fill)
+    2. Tuang dari teko i ke teko j (Pour)
+    3. Buang seluruh isi teko i (Empty)
+    Returns: list of (nxt_state, amount, action_text, src_idx, dst_idx, action_type)
     """
     n = len(state)
     neighbors = []
+
+    # 1. AKSI ISI PENUH DARI KERAN (FILL)
+    for i in range(n):
+        if state[i] < caps[i]:
+            added = caps[i] - state[i]
+            nxt = list(state)
+            nxt[i] = caps[i]
+            action_text = f"Isi penuh Teko {i+1} ({caps[i]}L) dari keran"
+            neighbors.append((tuple(nxt), added, action_text, None, i, "fill"))
+
+    # 2. AKSI PINDAH/TUANG ANTAR TEKO (POUR)
     for i in range(n):
         if state[i] == 0:
             continue
@@ -30,73 +46,65 @@ def get_neighbors(state, caps):
                 continue
             if state[j] < caps[j]:
                 amount = min(state[i], caps[j] - state[j])
-                new_state = list(state)
-                new_state[i] -= amount
-                new_state[j] += amount
+                nxt = list(state)
+                nxt[i] -= amount
+                nxt[j] += amount
                 
-                # Narasi deskriptif seperti narator video edukasi
-                rem_src = new_state[i]
-                curr_dst = new_state[j]
+                rem_src = nxt[i]
+                curr_dst = nxt[j]
                 cap_dst = caps[j]
                 status_dst = "hingga penuh" if curr_dst == cap_dst else ""
                 status_src = "hingga kosong" if rem_src == 0 else f"(sisa {rem_src}L)"
                 
                 action_text = f"Tuang {amount}L dari Teko {i+1} ke Teko {j+1} {status_dst} {status_src}".strip()
-                neighbors.append((tuple(new_state), amount, action_text, i, j))
+                neighbors.append((tuple(nxt), amount, action_text, i, j, "pour"))
+
+    # 3. AKSI BUANG SELURUH AIR (EMPTY)
+    for i in range(n):
+        if state[i] > 0:
+            emptied = state[i]
+            nxt = list(state)
+            nxt[i] = 0
+            action_text = f"Buang seluruh isi Teko {i+1} ({emptied}L dibuang)"
+            neighbors.append((tuple(nxt), emptied, action_text, i, None, "empty"))
+
     return neighbors
 
-def make_goal_checker(target_mode, target_amount, goal_tuple):
-    if target_mode == "single":
-        return lambda s: any(v == target_amount for v in s)
-    else:
-        return lambda s: s == goal_tuple
+def make_goal_checker(target_amount):
+    """Goal tercapai bila salah satu teko memiliki volume tepat target_amount."""
+    return lambda s: any(v == target_amount for v in s)
 
-def make_heuristic(target_mode, target_amount, goal_tuple):
+def make_heuristic(target_amount):
     """
     Heuristik Admisibel A*:
-    - Mode 'exact': h(n) = 0.5 * sum(|isi_k(n) - goal_k|)
-    - Mode 'single': h(n) = min(|isi_k(n) - target_amount|)
-      Karena satu tuangan 'a' liter maksimal mengubah volume teko mana pun sebesar 'a',
-      maka selisih ke target paling banyak berkurang 'a' per tuangan. Admisibel!
+    h(n) = min(|v - target_amount| for v in s)
+    Karena perpindahan air per aksi maksimal mengubah volume teko sebesar selisihnya,
+    nilai ini adalah lower bound liter menuju target terdekat.
     """
-    if target_mode == "single":
-        return lambda s: float(min(abs(v - target_amount) for v in s))
-    else:
-        return lambda s: sum(abs(curr - g) for curr, g in zip(s, goal_tuple)) / 2.0
+    return lambda s: float(min(abs(v - target_amount) for v in s))
 
-def validate_inputs(caps, start, target_mode, target_amount, goal):
+def validate_inputs(caps, target_amount):
     n = len(caps)
-    if not (3 <= n <= 5):
-        return False, f"Jumlah teko harus antara 3 sampai 5 teko (input: {n} teko)!"
-    if len(start) != n:
-        return False, "Jumlah nilai start harus sama dengan jumlah teko!"
+    if not (2 <= n <= 5):
+        return False, f"Jumlah teko harus antara 2 sampai 5 teko (input: {n} teko)!"
     
     for i in range(n):
         if caps[i] <= 0:
             return False, f"Kapasitas Teko {i+1} harus lebih besar dari 0 (> 0)!"
-        if not (0 <= start[i] <= caps[i]):
-            return False, f"Isi awal Teko {i+1} ({start[i]}L) harus antara 0 sampai kapasitasnya ({caps[i]}L)!"
 
-    sum_start = sum(start)
-    if sum_start == 0:
-        return False, "Total air awal tidak boleh 0 L! Minimal salah satu teko harus berisi air."
+    if target_amount <= 0:
+        return False, "Target volume air yang ingin diukur harus lebih besar dari 0 L!"
+    
+    max_c = max(caps)
+    if target_amount > max_c:
+        return False, f"Target ({target_amount}L) tidak boleh melebihi kapasitas teko terbesar ({max_c}L)!"
 
-    if target_mode == "single":
-        if target_amount <= 0:
-            return False, "Target volume air yang ingin diukur harus lebih besar dari 0 L!"
-        if target_amount >= max(caps):
-            return False, f"Target ({target_amount}L) harus lebih kecil dari kapasitas teko terbesar ({max(caps)}L)!"
-        if target_amount > sum_start:
-            return False, f"Target ({target_amount}L) melebihi total seluruh air yang tersedia ({sum_start}L)!"
-    else:
-        if len(goal) != n:
-            return False, "Jumlah nilai goal harus sama dengan jumlah teko!"
-        for i in range(n):
-            if not (0 <= goal[i] <= caps[i]):
-                return False, f"Target isi Teko {i+1} ({goal[i]}L) harus antara 0 sampai kapasitas ({caps[i]}L)!"
-        sum_goal = sum(goal)
-        if sum_start != sum_goal:
-            return False, f"Total goal ({sum_goal}L) tidak sama dengan air awal ({sum_start}L)! Menuang air tidak menambah atau mengurangi total air."
+    # FPB (GCD) feasibility check
+    overall_gcd = caps[0]
+    for c in caps[1:]:
+        overall_gcd = math.gcd(overall_gcd, c)
+    if target_amount % overall_gcd != 0:
+        return False, f"Target ({target_amount}L) tidak mungkin dicapai karena bukan kelipatan FPB kapasitas teko (FPB = {overall_gcd})!"
 
     return True, "Valid"
 
@@ -109,7 +117,7 @@ def solve_bfs(caps, start, is_goal, h_func):
         return {
             "name": "BFS (Breadth-First Search)",
             "found": True,
-            "path": [{"state": list(start_t), "action": "Kondisi Awal (Target Sudah Tercapai)", "amount": 0, "g": 0, "h": 0, "f": 0, "src": None, "dst": None}],
+            "path": [{"state": list(start_t), "action": "Kondisi Awal (Target Sudah Tercapai)", "amount": 0, "g": 0, "h": 0, "f": 0, "src": None, "dst": None, "action_type": "init"}],
             "steps": 0,
             "total_liters": 0,
             "expanded": 0,
@@ -122,7 +130,7 @@ def solve_bfs(caps, start, is_goal, h_func):
 
     queue = deque([start_t])
     visited = {start_t}
-    came_from = {start_t: (None, "Mulai (Kondisi Awal)", 0, None, None)}
+    came_from = {start_t: (None, "Mulai (Semua Teko Kosong)", 0, None, None, "start")}
     g_score = {start_t: 0}
     
     expanded = 0
@@ -131,7 +139,7 @@ def solve_bfs(caps, start, is_goal, h_func):
     found = False
     goal_found = None
     
-    while queue:
+    while queue and expanded < 100000:
         max_open = max(max_open, len(queue))
         curr = queue.popleft()
         expanded += 1
@@ -141,10 +149,10 @@ def solve_bfs(caps, start, is_goal, h_func):
             goal_found = curr
             break
             
-        for nxt, amount, action, src, dst in get_neighbors(curr, caps):
+        for nxt, amount, action, src, dst, action_type in get_neighbors(curr, caps):
             if nxt not in visited:
                 visited.add(nxt)
-                came_from[nxt] = (curr, action, amount, src, dst)
+                came_from[nxt] = (curr, action, amount, src, dst, action_type)
                 g_score[nxt] = g_score[curr] + amount
                 queue.append(nxt)
                 generated += 1
@@ -169,7 +177,7 @@ def solve_bfs(caps, start, is_goal, h_func):
     path = []
     curr = goal_found
     while curr is not None:
-        prev, action, amount, src, dst = came_from[curr]
+        prev, action, amount, src, dst, action_type = came_from[curr]
         h_val = round(h_func(curr), 1)
         g_val = g_score[curr]
         path.append({
@@ -180,7 +188,8 @@ def solve_bfs(caps, start, is_goal, h_func):
             "h": h_val,
             "f": round(g_val + h_val, 1),
             "src": src,
-            "dst": dst
+            "dst": dst,
+            "action_type": action_type
         })
         curr = prev
     path.reverse()
@@ -208,7 +217,7 @@ def solve_ucs(caps, start, is_goal, h_func):
         return {
             "name": "UCS (Uniform-Cost Search)",
             "found": True,
-            "path": [{"state": list(start_t), "action": "Kondisi Awal (Target Sudah Tercapai)", "amount": 0, "g": 0, "h": 0, "f": 0, "src": None, "dst": None}],
+            "path": [{"state": list(start_t), "action": "Kondisi Awal (Target Sudah Tercapai)", "amount": 0, "g": 0, "h": 0, "f": 0, "src": None, "dst": None, "action_type": "init"}],
             "steps": 0,
             "total_liters": 0,
             "expanded": 0,
@@ -221,7 +230,7 @@ def solve_ucs(caps, start, is_goal, h_func):
 
     counter = 0
     pq = [(0, counter, start_t)]
-    came_from = {start_t: (None, "Mulai (Kondisi Awal)", 0, None, None)}
+    came_from = {start_t: (None, "Mulai (Semua Teko Kosong)", 0, None, None, "start")}
     g_score = {start_t: 0}
     closed = set()
     
@@ -231,7 +240,7 @@ def solve_ucs(caps, start, is_goal, h_func):
     found = False
     goal_found = None
     
-    while pq:
+    while pq and expanded < 100000:
         max_open = max(max_open, len(pq))
         curr_g, _, curr = heapq.heappop(pq)
         
@@ -245,11 +254,11 @@ def solve_ucs(caps, start, is_goal, h_func):
             goal_found = curr
             break
             
-        for nxt, amount, action, src, dst in get_neighbors(curr, caps):
+        for nxt, amount, action, src, dst, action_type in get_neighbors(curr, caps):
             tentative_g = curr_g + amount
             if nxt not in g_score or tentative_g < g_score[nxt]:
                 g_score[nxt] = tentative_g
-                came_from[nxt] = (curr, action, amount, src, dst)
+                came_from[nxt] = (curr, action, amount, src, dst, action_type)
                 counter += 1
                 heapq.heappush(pq, (tentative_g, counter, nxt))
                 generated += 1
@@ -274,7 +283,7 @@ def solve_ucs(caps, start, is_goal, h_func):
     path = []
     curr = goal_found
     while curr is not None:
-        prev, action, amount, src, dst = came_from[curr]
+        prev, action, amount, src, dst, action_type = came_from[curr]
         h_val = round(h_func(curr), 1)
         g_val = g_score[curr]
         path.append({
@@ -285,7 +294,8 @@ def solve_ucs(caps, start, is_goal, h_func):
             "h": h_val,
             "f": round(g_val + h_val, 1),
             "src": src,
-            "dst": dst
+            "dst": dst,
+            "action_type": action_type
         })
         curr = prev
     path.reverse()
@@ -313,7 +323,7 @@ def solve_astar(caps, start, is_goal, h_func):
         return {
             "name": "A* Search",
             "found": True,
-            "path": [{"state": list(start_t), "action": "Kondisi Awal (Target Sudah Tercapai)", "amount": 0, "g": 0, "h": 0, "f": 0, "src": None, "dst": None}],
+            "path": [{"state": list(start_t), "action": "Kondisi Awal (Target Sudah Tercapai)", "amount": 0, "g": 0, "h": 0, "f": 0, "src": None, "dst": None, "action_type": "init"}],
             "steps": 0,
             "total_liters": 0,
             "expanded": 0,
@@ -327,7 +337,7 @@ def solve_astar(caps, start, is_goal, h_func):
     counter = 0
     h_start = h_func(start_t)
     pq = [(h_start, counter, start_t)]
-    came_from = {start_t: (None, "Mulai (Kondisi Awal)", 0, None, None)}
+    came_from = {start_t: (None, "Mulai (Semua Teko Kosong)", 0, None, None, "start")}
     g_score = {start_t: 0}
     closed = set()
     
@@ -337,7 +347,7 @@ def solve_astar(caps, start, is_goal, h_func):
     found = False
     goal_found = None
     
-    while pq:
+    while pq and expanded < 100000:
         max_open = max(max_open, len(pq))
         curr_f, _, curr = heapq.heappop(pq)
         
@@ -351,13 +361,13 @@ def solve_astar(caps, start, is_goal, h_func):
             goal_found = curr
             break
             
-        for nxt, amount, action, src, dst in get_neighbors(curr, caps):
+        for nxt, amount, action, src, dst, action_type in get_neighbors(curr, caps):
             tentative_g = g_score[curr] + amount
             if nxt not in g_score or tentative_g < g_score[nxt]:
                 g_score[nxt] = tentative_g
                 h_nxt = h_func(nxt)
                 f_nxt = tentative_g + h_nxt
-                came_from[nxt] = (curr, action, amount, src, dst)
+                came_from[nxt] = (curr, action, amount, src, dst, action_type)
                 counter += 1
                 heapq.heappush(pq, (f_nxt, counter, nxt))
                 generated += 1
@@ -382,7 +392,7 @@ def solve_astar(caps, start, is_goal, h_func):
     path = []
     curr = goal_found
     while curr is not None:
-        prev, action, amount, src, dst = came_from[curr]
+        prev, action, amount, src, dst, action_type = came_from[curr]
         h_val = round(h_func(curr), 1)
         g_val = g_score[curr]
         path.append({
@@ -393,7 +403,8 @@ def solve_astar(caps, start, is_goal, h_func):
             "h": h_val,
             "f": round(g_val + h_val, 1),
             "src": src,
-            "dst": dst
+            "dst": dst,
+            "action_type": action_type
         })
         curr = prev
     path.reverse()
@@ -984,6 +995,14 @@ HTML_TEMPLATE = """
             border-color: var(--accent-green) !important;
             box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
         }
+        .jug-item.ai-fill .jug-glass-body {
+            border-color: var(--accent-cyan) !important;
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.6);
+        }
+        .jug-item.ai-empty .jug-glass-body {
+            border-color: var(--accent-rose) !important;
+            box-shadow: 0 0 18px rgba(244, 63, 94, 0.6);
+        }
         .jug-item.target-reached .jug-glass-body {
             border-color: #38bdf8 !important;
             box-shadow: 0 0 20px rgba(56, 189, 248, 0.7);
@@ -1426,6 +1445,9 @@ HTML_TEMPLATE = """
                 <button class="preset-chip" id="preset-btn-5jugs" onclick="applyPreset('5jugs')">
                     <span class="chip-badge">5 Teko</span> 16-9-7-5-2 (Target 8L)
                 </button>
+                <button class="preset-chip" id="preset-btn-custom" onclick="applyPreset('custom')">
+                    <span class="chip-badge" style="background:rgba(245, 158, 11, 0.2); color:#fbbf24; border-color:rgba(245, 158, 11, 0.4);">✨ Kustom</span> Atur Sendiri (2–5 Teko)
+                </button>
             </div>
 
             <!-- PRESET DESCRIPTION CARD (RINGKAS & JELAS) -->
@@ -1437,6 +1459,49 @@ HTML_TEMPLATE = """
                 <p class="preset-info-desc" id="preset-info-desc">
                     Kasus klasik teka-teki pembagian air (8, 5, 3 L) dengan target 4 Liter. Menguji BFS (langkah terpendek) dan A*.
                 </p>
+            </div>
+
+            <!-- CUSTOM PRESET CONFIG PANEL -->
+            <div id="custom-config-panel" style="display:none; margin-top:12px; padding:14px 16px; background-color:#0b1120; border:1px solid #1e293b; border-left:3px solid var(--accent-cyan); border-radius:8px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:2px 8px; border-radius:4px; background:rgba(56,189,248,0.15); color:var(--accent-cyan); border:1px solid rgba(56,189,248,0.3);">Preset Kustom</span>
+                        <span style="font-size:13px; font-weight:700; color:var(--text-main);">Konfigurasi Teko & Goal State</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label style="font-size:12px; font-weight:700; color:var(--text-muted);">Jumlah Teko (2 - 5):</label>
+                        <select id="custom-num-jugs" onchange="onCustomNumJugsChange(this.value)" style="background:#1e293b; border:1px solid #334155; color:var(--text-main); border-radius:6px; padding:4px 10px; font-size:12px; font-weight:700; outline:none; cursor:pointer;">
+                            <option value="2">2 Teko</option>
+                            <option value="3" selected>3 Teko</option>
+                            <option value="4">4 Teko</option>
+                            <option value="5">5 Teko</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Dynamic Jug Capacities Inputs -->
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">Kapasitas Tiap Teko (Liter):</label>
+                    <div id="custom-caps-container" style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Single Goal State Input & Submit Button -->
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding-top:10px; border-top:1px solid #1e293b;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label style="font-size:12px; font-weight:700; color:var(--accent-cyan);">Target Goal State (1 Nilai):</label>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <input type="number" id="custom-target-input" min="1" value="4" style="width:70px; background:#1e293b; border:1px solid var(--accent-cyan); border-radius:6px; padding:5px 8px; color:var(--accent-cyan); font-weight:800; font-family:'JetBrains Mono', monospace; text-align:center; font-size:14px; outline:none;">
+                            <span style="font-size:12px; color:var(--text-muted); font-weight:600;">Liter (pada salah satu teko)</span>
+                        </div>
+                    </div>
+                    <button class="btn-action primary" onclick="submitCustomPreset()" style="padding:6px 16px; font-size:12px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Hitung Solusi
+                    </button>
+                </div>
+                <div id="custom-error-msg" style="display:none; margin-top:8px; font-size:12px; color:#fda4af; background:rgba(244,63,94,0.15); border:1px solid var(--accent-rose); border-radius:6px; padding:6px 10px;"></div>
             </div>
         </div>
 
@@ -1451,7 +1516,7 @@ HTML_TEMPLATE = """
                 <div class="hud-stats">
                     <div id="hud-ai-stats" style="display:flex; align-items:center; gap:14px;">
                         <span>Algoritma Aktif: <b class="stat-badge" id="hud-active-algo-name">BFS</b></span>
-                        <span id="hud-initial-info" style="font-size:12px; color:var(--text-muted);">Air Awal: <b style="color:var(--accent-cyan);" id="hud-start-summary">8L (Teko 1 Penuh)</b></span>
+                        <span id="hud-initial-info" style="font-size:12px; color:var(--text-muted);">Air Awal: <b style="color:var(--accent-cyan);" id="hud-start-summary">Semua Teko Kosong (0L)</b></span>
                     </div>
                 </div>
             </div>
@@ -1625,30 +1690,27 @@ HTML_TEMPLATE = """
             name: '8-5-3 (Target 4L)',
             title: 'Teko 8-5-3 &rarr; Ukur 4 Liter',
             tag: 'Kasus Klasik 3 Teko',
-            desc: 'Kasus klasik teka-teki pembagian air (8, 5, 3 L) dengan target 4 Liter. Menguji BFS (langkah terpendek) dan A*.',
+            desc: 'Kasus klasik teka-teki pembagian air (8, 5, 3 L) dengan target 4 Liter. Mulai dari semua teko kosong, algoritma mengeksplorasi aksi isi penuh, buang, dan tuang antar teko.',
             numJugs: 3,
             caps: [8, 5, 3],
-            start: [8, 0, 0],
             targetAmt: 4
         },
         'contrast': {
             name: '10-9-1 (Target 5L)',
             title: 'Teko 10-9-1 &rarr; Ukur 5 Liter',
             tag: 'Kontras BFS vs UCS',
-            desc: 'Kontras BFS vs UCS (10, 9, 1 L): BFS mencari langkah paling sedikit (8 langkah, 16L), sedangkan UCS mencari rute paling hemat liter tuang (9 langkah, 9L).',
+            desc: 'Kontras BFS vs UCS (10, 9, 1 L) target 5 Liter: BFS mengoptimalkan jumlah langkah aksi, sedangkan UCS dan A* mencari rute paling hemat volume liter tuang.',
             numJugs: 3,
             caps: [10, 9, 1],
-            start: [10, 0, 0],
             targetAmt: 5
         },
         '4jugs': {
             name: '12-8-5-3 (Target 6L)',
             title: 'Teko 12-8-5-3 &rarr; Ukur 6 Liter',
             tag: 'Kompleks 4 Teko',
-            desc: 'Simulasi 4 Teko (12, 8, 5, 3 L) dengan target 6 Liter. Menunjukkan efisiensi pemangkasan state oleh heuristik A*.',
+            desc: 'Simulasi 4 Teko (12, 8, 5, 3 L) dengan target 6 Liter. Menunjukkan efisiensi penelusuran ruang keadaan multi-teko oleh BFS, UCS, dan A*.',
             numJugs: 4,
             caps: [12, 8, 5, 3],
-            start: [12, 0, 0, 0],
             targetAmt: 6
         },
         '5jugs': {
@@ -1658,17 +1720,122 @@ HTML_TEMPLATE = """
             desc: 'Simulasi 5 Teko (16, 9, 7, 5, 2 L) dengan target 8 Liter. Menguji skalabilitas algoritma pencarian pada ruang state multi-teko.',
             numJugs: 5,
             caps: [16, 9, 7, 5, 2],
-            start: [16, 0, 0, 0, 0],
             targetAmt: 8
+        },
+        'custom': {
+            name: 'Kustom (2-5 Teko)',
+            title: 'Preset Kustom &rarr; Bebas Tentukan Teko & Target',
+            tag: 'Kustomisasi Pengguna',
+            desc: 'Pilih jumlah teko (2 sampai 5), tentukan kapasitas masing-masing teko, dan satu target volume air yang ingin diukur.',
+            numJugs: 3,
+            caps: [8, 5, 3],
+            targetAmt: 4
         }
     };
 
     let activePresetKey = 'video';
     let solverAbortController = null;
 
+    // State untuk Form Kustom
+    let customJugsCount = 3;
+    let customCaps = [8, 5, 3];
+    let customTarget = 4;
+
+    function onCustomNumJugsChange(val) {
+        customJugsCount = parseInt(val);
+        const defaultCaps = [8, 5, 3, 2, 1];
+        while (customCaps.length < customJugsCount) {
+            customCaps.push(defaultCaps[customCaps.length] || 2);
+        }
+        if (customCaps.length > customJugsCount) {
+            customCaps = customCaps.slice(0, customJugsCount);
+        }
+        renderCustomCapsInputs();
+    }
+
+    function renderCustomCapsInputs() {
+        const container = document.getElementById('custom-caps-container');
+        if (!container) return;
+        container.innerHTML = '';
+        for (let i = 0; i < customJugsCount; i++) {
+            const val = customCaps[i] || (i === 0 ? 8 : (i === 1 ? 5 : 3));
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex; flex-direction:column; gap:4px; background:#0f172a; border:1px solid #1e293b; border-radius:8px; padding:8px 12px; min-width:110px;';
+            div.innerHTML = `
+                <span style="font-size:11px; font-weight:700; color:var(--accent-cyan);">Teko ${i + 1}</span>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <input type="number" min="1" max="99" id="cap-input-${i}" value="${val}" onchange="customCaps[${i}] = parseInt(this.value) || 1" style="width:55px; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:4px 6px; color:white; font-weight:700; font-family:'JetBrains Mono', monospace; text-align:center; font-size:13px; outline:none;">
+                    <span style="font-size:11px; color:var(--text-muted); font-weight:600;">L</span>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+    }
+
+    function submitCustomPreset() {
+        const errEl = document.getElementById('custom-error-msg');
+        if (errEl) errEl.style.display = 'none';
+
+        const caps = [];
+        for (let i = 0; i < customJugsCount; i++) {
+            const input = document.getElementById(`cap-input-${i}`);
+            const val = input ? parseInt(input.value) : 0;
+            if (isNaN(val) || val <= 0) {
+                if (errEl) {
+                    errEl.textContent = `Kapasitas Teko ${i + 1} harus bilangan bulat positif (> 0)!`;
+                    errEl.style.display = 'block';
+                }
+                return;
+            }
+            caps.push(val);
+        }
+
+        const targetInput = document.getElementById('custom-target-input');
+        const targetAmt = targetInput ? parseInt(targetInput.value) : 0;
+        if (isNaN(targetAmt) || targetAmt <= 0) {
+            if (errEl) {
+                errEl.textContent = 'Target volume harus bilangan bulat positif (> 0)!';
+                errEl.style.display = 'block';
+            }
+            return;
+        }
+
+        const maxCap = Math.max(...caps);
+        if (targetAmt > maxCap) {
+            if (errEl) {
+                errEl.textContent = `Target (${targetAmt}L) tidak boleh melebihi kapasitas teko terbesar (${maxCap}L)!`;
+                errEl.style.display = 'block';
+            }
+            return;
+        }
+
+        // GCD feasibility check
+        function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+        let overallGcd = caps[0];
+        for (let i = 1; i < caps.length; i++) {
+            overallGcd = gcd(overallGcd, caps[i]);
+        }
+        if (targetAmt % overallGcd !== 0) {
+            if (errEl) {
+                errEl.textContent = `Target (${targetAmt}L) tidak mungkin dicapai karena bukan kelipatan FPB kapasitas teko (FPB = ${overallGcd})!`;
+                errEl.style.display = 'block';
+            }
+            return;
+        }
+
+        customCaps = caps;
+        customTarget = targetAmt;
+
+        PRESETS['custom'].caps = caps;
+        PRESETS['custom'].numJugs = caps.length;
+        PRESETS['custom'].targetAmt = targetAmt;
+
+        applyPreset('custom');
+    }
+
     function setActivePresetUI(presetKey) {
         activePresetKey = presetKey;
-        const keys = ['video', 'contrast', '4jugs', '5jugs'];
+        const keys = ['video', 'contrast', '4jugs', '5jugs', 'custom'];
         keys.forEach(k => {
             const btn = document.getElementById(`preset-btn-${k}`);
             if (btn) {
@@ -1680,20 +1847,35 @@ HTML_TEMPLATE = """
             }
         });
 
-        const tagEl = document.getElementById('preset-info-tag');
-        const titleEl = document.getElementById('preset-info-title');
-        const descEl = document.getElementById('preset-info-desc');
+        const infoCard = document.getElementById('preset-info-card');
+        const customPanel = document.getElementById('custom-config-panel');
 
-        if (PRESETS[presetKey]) {
-            const p = PRESETS[presetKey];
-            if (tagEl) {
-                tagEl.textContent = p.tag;
-                tagEl.style.color = '#fbbf24';
-                tagEl.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-                tagEl.style.background = 'rgba(245, 158, 11, 0.15)';
+        if (presetKey === 'custom') {
+            if (infoCard) infoCard.style.display = 'none';
+            if (customPanel) {
+                customPanel.style.display = 'block';
+                renderCustomCapsInputs();
             }
-            if (titleEl) titleEl.innerHTML = p.title;
-            if (descEl) descEl.textContent = p.desc;
+        } else {
+            if (customPanel) customPanel.style.display = 'none';
+            if (infoCard) {
+                infoCard.style.display = 'flex';
+                const tagEl = document.getElementById('preset-info-tag');
+                const titleEl = document.getElementById('preset-info-title');
+                const descEl = document.getElementById('preset-info-desc');
+
+                if (PRESETS[presetKey]) {
+                    const p = PRESETS[presetKey];
+                    if (tagEl) {
+                        tagEl.textContent = p.tag;
+                        tagEl.style.color = '#fbbf24';
+                        tagEl.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+                        tagEl.style.background = 'rgba(245, 158, 11, 0.15)';
+                    }
+                    if (titleEl) titleEl.innerHTML = p.title;
+                    if (descEl) descEl.textContent = p.desc;
+                }
+            }
         }
     }
 
@@ -1710,10 +1892,11 @@ HTML_TEMPLATE = """
         if (hudTarget) hudTarget.textContent = `Ukur tepat ${p.targetAmt} Liter pada salah satu teko`;
 
         const hudSummary = document.getElementById('hud-start-summary');
-        if (hudSummary) hudSummary.textContent = `${p.start[0]}L (Teko 1 Penuh)`;
+        if (hudSummary) hudSummary.textContent = `Semua Teko Kosong (0L)`;
 
         currentStep = 0;
-        renderAIJugsStage(p.start, p.caps, null, null);
+        const initialStart = new Array(p.caps.length).fill(0);
+        renderAIJugsStage(initialStart, p.caps, null, null, 'start');
         const lblCurrStep = document.getElementById('lbl-curr-step');
         if (lblCurrStep) lblCurrStep.textContent = '0';
         const scrubber = document.getElementById('scrubber');
@@ -1736,16 +1919,17 @@ HTML_TEMPLATE = """
                 signal: solverAbortController.signal,
                 body: JSON.stringify({
                     caps: p.caps,
-                    start: p.start,
-                    target_mode: 'single',
-                    target_amount: p.targetAmt,
-                    goal: []
+                    target_amount: p.targetAmt
                 })
             });
             const data = await res.json();
 
             if (!data.valid) {
-                console.error(data.message);
+                const errBanner = document.getElementById('custom-error-msg');
+                if (errBanner) {
+                    errBanner.textContent = data.message;
+                    errBanner.style.display = 'block';
+                }
                 return;
             }
 
@@ -1892,8 +2076,8 @@ HTML_TEMPLATE = """
             currentStep = 0;
             const p = PRESETS[activePresetKey] || PRESETS['video'];
             const caps = (solversData && solversData.caps) || p.caps;
-            const start = (solversData && solversData.start) || p.start;
-            renderAIJugsStage(start, caps, null, null);
+            const start = (solversData && solversData.start) || new Array(caps.length).fill(0);
+            renderAIJugsStage(start, caps, null, null, 'start');
 
             const badge = document.getElementById('step-badge');
             badge.textContent = 'TIDAK ADA SOLUSI';
@@ -1951,7 +2135,7 @@ HTML_TEMPLATE = """
         closedBox.innerHTML = (algoData.closed_sample || []).map(s => `<div>(${s.join(',')})</div>`).join('') || '<div>-</div>';
     }
 
-    function renderAIJugsStage(state, caps, src, dst) {
+    function renderAIJugsStage(state, caps, src, dst, actionType) {
         const stageArea = document.getElementById('jugs-render-area');
         stageArea.innerHTML = '';
         const p = PRESETS[activePresetKey] || PRESETS['video'];
@@ -1964,18 +2148,35 @@ HTML_TEMPLATE = """
             const dim = getJugDimensions(cap);
             const ticksHtml = getMeasuringScaleHtml(cap);
 
-            const isSource = (src !== null && src === i);
-            const isTarget = (dst !== null && dst === i);
+            const isFill = (actionType === 'fill' && dst !== null && dst === i);
+            const isEmpty = (actionType === 'empty' && src !== null && src === i);
+            const isSource = (actionType === 'pour' && src !== null && src === i);
+            const isTarget = (actionType === 'pour' && dst !== null && dst === i);
             const isTargetAchieved = (vol === targetAmount);
 
             const item = document.createElement('div');
             item.className = 'jug-item';
+            if (isFill) item.classList.add('ai-fill');
+            if (isEmpty) item.classList.add('ai-empty');
             if (isSource) item.classList.add('ai-source');
             if (isTarget) item.classList.add('ai-target');
             if (isTargetAchieved) item.classList.add('target-reached');
 
+            let actionBadgeHtml = '';
+            if (isTargetAchieved) {
+                actionBadgeHtml = `<div class="jug-win-badge">Target (${vol}L)</div>`;
+            } else if (isFill) {
+                actionBadgeHtml = `<div class="jug-tag-badge" style="display:block; background:#0284c7; color:white;">💧 ISI PENUH</div>`;
+            } else if (isEmpty) {
+                actionBadgeHtml = `<div class="jug-tag-badge" style="display:block; background:#e11d48; color:white;">🚰 BUANG AIR</div>`;
+            } else if (isSource) {
+                actionBadgeHtml = `<div class="jug-tag-badge" style="display:block; background:var(--accent-amber); color:#111827;">SUMBER TUANG</div>`;
+            } else if (isTarget) {
+                actionBadgeHtml = `<div class="jug-tag-badge" style="display:block; background:var(--accent-green); color:white;">PENERIMA AIR</div>`;
+            }
+
             item.innerHTML = `
-                ${isTargetAchieved ? `<div class="jug-win-badge">Target (${vol}L)</div>` : ''}
+                ${actionBadgeHtml}
                 <div class="jug-header-label">
                     Teko ${i + 1} (${cap}L)
                 </div>
@@ -2002,7 +2203,7 @@ HTML_TEMPLATE = """
         const step = path[currentStep];
         const caps = solversData.caps;
 
-        renderAIJugsStage(step.state, caps, step.src, step.dst);
+        renderAIJugsStage(step.state, caps, step.src, step.dst, step.action_type);
 
         const badge = document.getElementById('step-badge');
         badge.textContent = `LANGKAH ${currentStep} / ${path.length - 1}`;
@@ -2017,6 +2218,16 @@ HTML_TEMPLATE = """
 
         document.getElementById('lbl-curr-step').textContent = currentStep;
         document.getElementById('scrubber').value = currentStep;
+
+        if (step.action_type === 'fill') {
+            showPourIndicator(`Mengisi penuh Teko ${(step.dst !== null ? step.dst + 1 : '')} (${caps[step.dst]}L) dari keran...`);
+        } else if (step.action_type === 'empty') {
+            showPourIndicator(`Membuang seluruh air dari Teko ${(step.src !== null ? step.src + 1 : '')}...`);
+        } else if (step.action_type === 'pour') {
+            showPourIndicator(`Menuang ${step.amount}L dari Teko ${(step.src !== null ? step.src + 1 : '')} ke Teko ${(step.dst !== null ? step.dst + 1 : '')}...`);
+        } else {
+            hidePourIndicator();
+        }
 
         document.querySelectorAll('.step-row-item').forEach(r => r.classList.remove('active'));
         const activeRow = document.getElementById(`step-row-${currentStep}`);
@@ -2128,24 +2339,18 @@ def index():
 def solve():
     req = request.get_json() or {}
     caps = [int(x) for x in req.get("caps", [8, 5, 3])]
-    start_req = req.get("start")
-    if start_req and len(start_req) == len(caps):
-        start = [int(x) for x in start_req]
-    else:
-        start = [caps[0]] + [0] * (len(caps) - 1)
-    target_mode = req.get("target_mode", "single")
     target_amount = int(req.get("target_amount", 4))
-    goal = [int(x) for x in req.get("goal", [4, 4, 0])]
+    start = [0] * len(caps)
 
-    is_valid, msg = validate_inputs(caps, start, target_mode, target_amount, goal)
+    is_valid, msg = validate_inputs(caps, target_amount)
     if not is_valid:
         return jsonify({
             "valid": False,
             "message": msg
         })
 
-    goal_checker = make_goal_checker(target_mode, target_amount, tuple(goal))
-    heuristic_func = make_heuristic(target_mode, target_amount, tuple(goal))
+    goal_checker = make_goal_checker(target_amount)
+    heuristic_func = make_heuristic(target_amount)
 
     bfs_res = solve_bfs(caps, start, goal_checker, heuristic_func)
     ucs_res = solve_ucs(caps, start, goal_checker, heuristic_func)
@@ -2156,9 +2361,7 @@ def solve():
         "message": "Sukses",
         "caps": caps,
         "start": start,
-        "target_mode": target_mode,
         "target_amount": target_amount,
-        "goal": goal,
         "bfs": bfs_res,
         "ucs": ucs_res,
         "astar": astar_res
